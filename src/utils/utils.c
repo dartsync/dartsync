@@ -20,7 +20,8 @@
 #include <sys/utsname.h>
 #include <pthread.h>
 #include <unistd.h>
-#include "constants.c"
+
+#include "constants.h"
 
 /*
 * this method will call "clear command" through exec

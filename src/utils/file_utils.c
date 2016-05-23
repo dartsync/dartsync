@@ -5,7 +5,8 @@
  *      Author: Vishal Gaurav
  */
 #include <unistd.h>
-#include "constants.c"
+
+#include "constants.h"
 
 /**
 * function to check for the existence of a file

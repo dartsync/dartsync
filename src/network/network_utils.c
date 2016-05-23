@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include "network_utils.h"
+#include "../utils/constants.h"
 
 int get_server_socket_fd(int port, int maxConn){
 	int conn_listen_fd = -1;
@@ -118,4 +119,10 @@ int get_peer_address(int socketFD, char* ip, char length) {
 	    strcpy(ip, inet_ntoa(addr.sin_addr));
 	}
     return result;
+}
+/**
+ * return TRUE if ipaddress is valid
+ */
+int is_ip_valid(char* ip_address, struct sockaddr_in *addr) {
+    return inet_pton(AF_INET, ip_address, &addr->sin_addr) > 0 ? TRUE : FALSE  ;
 }
