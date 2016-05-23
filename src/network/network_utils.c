@@ -1,3 +1,12 @@
+/*
+ ============================================================================
+ Name        : network_utils.c
+ Author      : Vishal Gaurav
+ Version     : 1.0
+ Copyright   : CS60 dartsync project
+ Description : utility for network operations
+ ============================================================================
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
