@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(void) {
+int main(int argc, char *argv[]) {
 	puts("!!!Hello World TRACKER!!!"); /* prints !!!Hello World!!! */
 	return EXIT_SUCCESS;
 }

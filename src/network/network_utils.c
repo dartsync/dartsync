@@ -23,13 +23,13 @@
 #include <unistd.h>
 #include "network_utils.h"
 
-int get_server_socket_fD(int port, int maxConn){
+int get_server_socket_fd(int port, int maxConn){
 	int conn_listen_fd = -1;
 	// create socket 
 	conn_listen_fd = socket (AF_INET, SOCK_STREAM, 0);
 	if(conn_listen_fd < 0)
 	{
-		printf("Error creating new scoket in acceptConnectionFromNode\n");
+		printf("Error creating new socket in get_server_socket_fD \n");
 		return -1;
 	}
 	struct sockaddr_in node_addr; // server

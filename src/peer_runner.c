@@ -11,7 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(void) {
+int main(int argc, char *argv[]) {
 	puts("!!!Hello World PEER!!!");
+	if(argc > 2){
+
+	}else{
+		printf("tracker IP address and root directory are required as input parameters");
+	}
 	return EXIT_SUCCESS;
 }
