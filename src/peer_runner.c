@@ -7,14 +7,14 @@
  Description : this file will contain the main function for peer
  ============================================================================
  */
-
+#include "./peer/peer.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 int main(int argc, char *argv[]) {
 	puts("!!!Hello World PEER!!!");
 	if(argc > 2){
-
+		start_peer(argv);
 	}else{
 		printf("tracker IP address and root directory are required as input parameters");
 	}
