@@ -10,6 +10,7 @@ char tracker_host_name[100];
 
 #include "peer.h"
 #include "../utils/seg.h"
+#include "../utils/constants.h"
 //#include "filetable.h"
 
 int heartbeat_interval;
