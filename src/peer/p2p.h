@@ -9,9 +9,15 @@ typedef struct p2p_seg{
 
 typedef struct download_seg{
 	int socket;
+	unsigned int peer_ip;
+	int isSuccess;
+	FILE *tempFile;
 	peer2peer_seg seg;
 } peerdownload_seg;
-
+typedef struct{
+	peerdownload_seg *download_seg;
+	pthread_t thread;
+}temp_download_t;
 int send_p2p_seg(int network_conn, peer2peer_seg* send_seg);
 void peerdownload(void* arg);
 void peerupload(void* arg);

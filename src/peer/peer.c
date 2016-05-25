@@ -10,6 +10,7 @@ char tracker_host_name[100];
 
 #include "peer.h"
 #include "../utils/seg.h"
+#include "../network/network_utils.h"
 #include "../utils/constants.h"
 //#include "filetable.h"
 
@@ -171,9 +172,95 @@ void peerlistening(){
   printf("Peer listening thread exit!\n");
   pthread_exit(NULL);
 }
+/**
+ * typedef struct p2p_seg{
+	char file_name[MAX_FILE_NAME_LEN];
+	int piece_len;
+	int start_idx;
+	int end_idx;
+} peer2peer_seg;
+
+typedef struct download_seg{
+	int socket;
+	peer2peer_seg seg;
+} peerdownload_seg;
+ */
+void *download_chunk(void *download_info){
+	fflush(stdout);
+	peerdownload_seg *download_seg = (peerdownload_seg *) download_info;
+	download_seg->socket = get_client_socket_fd_ip(download_seg->peer_ip,PEER_DOWNLOAD_PORT);
+	if(download_seg->socket < 0){
+		printf("unable to get socket for chunk download \n");
+		pthread_exit(NULL);
+		return NULL;
+	}
+	if(send(download_seg->socket,download_seg->seg) < 0){
+		printf("unable to segment to socket \n");
+		close(download_seg->socket);
+		pthread_exit(NULL);
+		return NULL;
+	}
+	int received_size = 0 ;
+	char buffer[FILE_BUFFER_SIZE];
+	while((received_size = recv(download_seg->socket,buffer,FILE_BUFFER_SIZE,0)) > 0){
+		fwrite(buffer,received_size,1,download_seg->tempFile);
+	}
+	printf("chunk download success \n");
+	download_seg->isSuccess = TRUE;
+	close(download_seg->socket);
+	fflush(stdout);
+	pthread_exit(NULL);
+	return NULL;
+}
+void merge_temp_file(FILE *main_file, FILE *temp_file){
+	fseek(temp_file,0,SEEK_SET);
+	char buffer[FILE_BUFFER_SIZE];
+	int received_size = 0 ;
+	while((received_size = fread(buffer,FILE_BUFFER_SIZE,1,temp_file)) > 0){
+		fwrite(buffer,received_size,1,main_file);
+	}
+}
+void *file_download_handler(void *file_info){
+	Node* file_node = (Node *) file_info;
+	if(file_node){
+		int chunks = (file_node->size > file_node->peernum) ? file_node->peernum : file_node->size ;
+		if(chunks > 0){
+			temp_download_t multi_threads[chunks] ;
+			int chunk_size = file_node->size / chunks;
+			for(int i = 0 ; i < chunks ; i++){
+				// start downloading chunks
+				peerdownload_seg *download_seg = (peerdownload_seg *)malloc(sizeof(peerdownload_seg));
+				bzero(download_seg,sizeof(peerdownload_seg));
+				download_seg->seg.start_idx = i * chunk_size;
+				download_seg->seg.piece_len =  (i < chunks -1) ? chunk_size :  (file_node->size - (i * chunk_size));
+				memcpy(download_seg->seg.file_name,file_node->name,MAX_FILE_NAME_LEN);
+				download_seg->peer_ip = file_node->peerip[i];
+				download_seg->tempFile = tmpfile(); // assuming tempfile is unique and will not stored in the file monitor directory
+				download_seg->isSuccess = FALSE;
+				multi_threads[i].download_seg = download_seg;
+				pthread_create(&multi_threads[i].thread, NULL, download_chunk,(void *)download_seg);
+			}
+			FILE *main_file = fopen(file_node->name,"a");
+			for(int i = 0 ; i < chunks ; i++){
+				if(multi_threads[i]){
+					pthread_join(multi_threads[i]);
+					// merge the downloaded chunks
+					merge_temp_file(main_file,multi_threads[i].download_seg->tempFile);
+				}
+			}
+		}
+	}
+	pthread_exit(NULL);
+	return NULL ;
+}
 
 int download_file(Node* file_node){
 	printf(" in download file \n");
+	if(file_node){
+		pthread_t peer_download_thread;
+		pthread_create(&peer_download_thread,NULL,peerdownload,(void*)file_node);
+	}
+	return 0;
 }
 /*int download_file(Node* fnode){
 	printf("In download_file: downloading file: %s \n", fnode->name);

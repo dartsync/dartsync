@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include "../utils/constants.h"
 int send_p2p_seg(int network_conn, peer2peer_seg* send_seg){
-	send(network_conn,send_seg,sizeof(peer2peer_seg),0);
+	return send(network_conn,send_seg,sizeof(peer2peer_seg),0);
 }
 
 
@@ -36,8 +36,6 @@ void peerdownload(void* arg){
 	int filelen = send_seg->end_idx - send_seg->start_idx;
 	if(peer_conn<0){
 		printf("download thread error: wrong network socket\n");
-
-
 	}
 	//send file info to target peer
 	send_p2p_seg(peer_conn,send_seg);
@@ -70,6 +68,9 @@ void peerdownload(void* arg){
 	fclose(fp);
 	pthread_exit(NULL);
 }
+/**
+ * will return the next chunk size to be uploaded
+ */
 int get_chunk_size(int total_sent, int size) {
 	int chunk_size = 0;
 	int remaining = size - total_sent;
@@ -89,7 +90,7 @@ void p2p_upload(void* arg){
 	}
 	peer2peer_seg header = (peer2peer_seg * ) malloc(sizeof(peer2peer_seg));
 	bzero(header, sizeof(peer2peer_seg));
-	if(recv(header) < 0){
+	if(recv(sock_fd,header,sizeof(peer2peer_seg),0) < 0){
 		close(sock_fd);
 	    free(header);
 		printf("Error in p2p_upload recv ERROR  \n");
