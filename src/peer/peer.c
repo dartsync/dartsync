@@ -194,8 +194,8 @@ void *download_chunk(void *download_info){
 		pthread_exit(NULL);
 		return NULL;
 	}
-	if(send(download_seg->socket,download_seg->seg) < 0){
-		printf("unable to segment to socket \n");
+	if(send_p2p_seg(download_seg->socket,download_seg->seg) < 0){
+		printf("unable to send segment to socket %d \n",download_seg->socket);
 		close(download_seg->socket);
 		pthread_exit(NULL);
 		return NULL;
@@ -246,6 +246,7 @@ void *file_download_handler(void *file_info){
 					pthread_join(multi_threads[i]);
 					// merge the downloaded chunks
 					merge_temp_file(main_file,multi_threads[i].download_seg->tempFile);
+					fclose(multi_threads[i].download_seg->tempFile);
 				}
 			}
 		}
@@ -262,55 +263,11 @@ int download_file(Node* file_node){
 	}
 	return 0;
 }
-/*int download_file(Node* fnode){
-	printf("In download_file: downloading file: %s \n", fnode->name);
-	int filesize=fnode->size;
-	int peernum=fnode->peernum;
-	//creat a download thread for each peer that own the requested file
-	int i;
-	for(i=0;i<peernum;i++){
-		// find if there exist a temp file, if not exit, try to download from peer
-		if(){
-			int download_sock;
-			// creat a new socket for connection
-		    if( (download_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-		    printf("create socket error: %s(errno: %d)\n", strerror(errno),errno);
-		    exit(0);
-		    }
-		    memset(&servaddr, 0, sizeof(servaddr));
-		    servaddr.sin_family = AF_INET;
-		    servaddr.sin_port = htons();
-		    if(inet_pton(AF_INET, serveraddr, &servaddr.sin_addr) <= 0){
-		   		printf("inet_pton error for %s\n",argv[1]);
-		    	exit(0);
-		    }
-		    if(connect(download_sock, (struct sockaddr*)&servaddr, sizeof(servaddr)) < 0){
-		    	printf("connect error: %s(errno: %d)\n",strerror(errno),errno);
-		    	exit(0);
-		    }
-		    peerdownload_seg download_file;
-
-		    download_file->socket=download_sock;
-		    download_file->seg.piece_len=
-			download_file->seg.start_idx=
-			download_file->seg.end_idx=
-
-
-			pthread_t peer_download_thread;
-			pthread_create(&peer_download_thread,NULL,peerdownload,(void*)&download_file);
-		}
-	}
-	//wait until all the tmp file have been downloaded
-	while(){
-
-	}
-
-}*/
 
 void* filemonitor(void* arg){
 	char* dir=(char*)arg;
 	watchDirectory(filetable,dir);
-
+	return NULL;
 }
 
 void* heartbeat(){
@@ -338,7 +295,31 @@ void peer_stop(){
 	exit(0);
 }
 
+void *file_upload_request_handler(){
+	int server_sock_fd = get_server_socket_fd(PEER_DOWNLOAD_PORT,MAX_PEERS_NUM);
+	if(server_sock_fd < 0 ){
+		printf("unable to create listening socket for upload handler\n");
+		pthread_exit(NULL);
+		return NULL;
+	}
+	struct sockaddr client_address ;
+	int addr_length = sizeof(struct sockaddr);
+	while(1){
+		int new_connection = accept(server_sock_fd, (struct sockaddr*)&client_address, &addr_length);
+		printf("received a new upload request %d \n",new_connection);
+		if(new_connection > 0){
+			// create a new thread for the upload handler and
+			pthread_t upload_handler_thread;
+			pthread_create(&upload_handler_thread,NULL,p2p_upload,(void*)&new_connection);
+		}else{
+			printf("Error in accepting new upload request\n");
+		}
+	}
+	return NULL;
+}
+
 void start_peer(char *argv[]){
+	//TODO need to figure out the use of arguments
 
 	char filename[1024];
 	readConfigFile(&filename);
@@ -354,17 +335,19 @@ void start_peer(char *argv[]){
 		printf("Connect to Tracker fail \n");
 		exit(0);
 	}
+    signal(SIGINT, peer_stop);
 
     pthread_t alive_thread;
     pthread_create(&alive_thread,NULL,heartbeat,(void*)0);
 
-    signal(SIGINT, peer_stop);
-
 	pthread_t file_monitor_thread;
 	pthread_create(&file_monitor_thread,NULL,filemonitor,(void*)filename);
 
-	//pthread_t peer_listening_thread;
-	//pthread_create(&peer_listening_thread,NULL,peerlistening,(void*)0);
+	/**
+	 * starting thread for listening to upload request
+	 */
+	pthread_t file_upload_thread ;
+	pthread_create(&file_upload_thread,NULL,file_upload_request_handler, NULL);
 
 	while(1){
 		// keep receving message from tracker
@@ -375,7 +358,6 @@ void start_peer(char *argv[]){
   		printf("Received segment from tracker\n");
   		printf("Received filetable size: %d \n",recvseg.file_table_size);
   		peer_update_filetable(recvseg.file_table,recvseg.file_table_size);
-
 	}
 
 }

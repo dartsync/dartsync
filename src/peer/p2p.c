@@ -81,7 +81,7 @@ int get_chunk_size(int total_sent, int size) {
 	}
 	return chunk_size;
 }
-void p2p_upload(void* arg){
+void *p2p_upload(void* arg){
 	fflush(stdout);
 	int sock_fd = (int *) arg;
 	if(sock_fd < 0 ){
