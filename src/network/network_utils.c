@@ -72,15 +72,39 @@ int get_client_socket_fd(char* hostName, int portNumber){
 	serverAddress = gethostbyname(hostName);
 	bzero(&server_addr, sizeof(struct sockaddr_in));
 	server_addr.sin_family = AF_INET;
-    // copy addresses from DNS lookup to socket address
     bcopy((char *)serverAddress->h_addr, (char *)&server_addr.sin_addr.s_addr, serverAddress->h_length);
-    server_addr.sin_port = htons(portNumber); // changin the byte order to network order
+    server_addr.sin_port = htons(portNumber);
     if(connect(socketFD,(struct sockaddr *)&server_addr,sizeof(server_addr)) < 0){
         printf("connection failed to %s",hostName);
         close(socketFD);
         return -1;
     }
     return socketFD;
+}
+
+int get_client_socket_fd_ip(unsigned int ip_address, int portNumber){
+	struct sockaddr_in server_addr;
+    bzero(&server_addr, sizeof(struct sockaddr_in));
+	struct in_addr in;
+	in.s_addr = (unsigned int)ip_address;
+	int socketFD = socket(AF_INET, SOCK_STREAM, 0);
+	if(socketFD < 0 ){
+		printf("Error in creating a new socket\n");
+		return socketFD;
+	 }
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(portNumber);
+	char* ip = inet_ntoa(in);
+	if (inet_aton(ip, &server_addr.sin_addr) == 0)  {
+		printf("create_client_socket(): Server IP address error!\n");
+		return -1;
+	}
+	if(connect(socketFD,(struct sockaddr *)&server_addr,sizeof(server_addr)) < 0){
+		printf("connection failed to %d",ip_address);
+		close(socketFD);
+		return -1;
+	}
+	return socketFD;
 }
 
 unsigned long get_my_ip(){

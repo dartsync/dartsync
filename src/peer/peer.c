@@ -172,6 +172,9 @@ void peerlistening(){
   pthread_exit(NULL);
 }
 
+int download_file(Node* file_node){
+	printf(" in download file \n");
+}
 /*int download_file(Node* fnode){
 	printf("In download_file: downloading file: %s \n", fnode->name);
 	int filesize=fnode->size;
@@ -249,12 +252,7 @@ void peer_stop(){
 }
 
 void start_peer(char *argv[]){
-	//TODO fetch ip_address and root dir from argv.
-	//input_string("Enter the IP address of tracker (max 100 chars ) \n",tracker_host_name,TRACKER_ADDRESS_LENGTH);
 
-
-
-	//char filename[MAX_FILE_NAME];
 	char filename[1024];
 	readConfigFile(&filename);
 	printf("Get sync dir: %s\n",filename);
@@ -290,7 +288,6 @@ void start_peer(char *argv[]){
   		printf("Received segment from tracker\n");
   		printf("Received filetable size: %d \n",recvseg.file_table_size);
   		peer_update_filetable(recvseg.file_table,recvseg.file_table_size);
-
 
 	}
 

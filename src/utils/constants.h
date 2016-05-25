@@ -34,6 +34,8 @@
 
 #define PIECE_LENGTH 1500
 
+#define FILE_BUFFER_SIZE 1024
+
 #define MAX_PEERS_NUM 10
 
 #define IP_LEN 16

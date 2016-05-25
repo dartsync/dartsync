@@ -1,7 +1,7 @@
 #include "../utils/constants.h"
 
 typedef struct p2p_seg{
-	char file_name[MAX_FILE_NAME];
+	char file_name[MAX_FILE_NAME_LEN];
 	int piece_len;
 	int start_idx;
 	int end_idx;
