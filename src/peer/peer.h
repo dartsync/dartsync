@@ -17,3 +17,4 @@
 int send_filetable();
 
 void start_peer(char *argv[]);
+void start_peer_in_test();

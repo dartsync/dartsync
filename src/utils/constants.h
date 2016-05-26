@@ -20,6 +20,8 @@
 
 #define PEER_DOWNLOAD_PORT 4879
 
+#define TIMEOUT_SOCKET 5
+
 #define MAX_FILE_NUM 128
 
 #define MAX_FILE_NAME_LEN 128
@@ -33,6 +35,8 @@
 #define HEARTBEAT_INTERVAL 1
 
 #define PIECE_LENGTH 1500
+
+#define FILE_BUFFER_SIZE 1024
 
 #define MAX_PEERS_NUM 10
 

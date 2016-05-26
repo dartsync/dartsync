@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/time.h>
+#include <sys/times.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -20,6 +22,7 @@
 #include <sys/utsname.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "constants.h"
 
@@ -43,7 +46,20 @@ int clear_screen(int shouldWaitToFinish){
 	/* child process for clear ends */
 }
 
+long current_time_millis(){
+	struct timeval stop, start;
+	gettimeofday(&start, NULL);
+	return (long)start.tv_usec;
+}
 
+/*void wait_for_some_time_n(int nano_sec){
+	// sleep for 1000 nano seconds before next iteration
+	struct timespec tim;
+	tim.tv_sec = 0;
+	tim.tv_nsec = nano_sec;
+	nanosleep(&tim,NULL);
+}
+*/
 /**
 *helper method to ask user to press enter and continue
 */

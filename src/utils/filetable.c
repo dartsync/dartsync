@@ -21,7 +21,7 @@ peer_file_table* filetable_init(char* directory){
     pdir = opendir (directory);
     if (pdir == NULL) {
         printf ("Cannot open base directory \n");
-        return ;
+        return NULL;
     }
     while ((pdirent = readdir(pdir)) != NULL) {
 		if(pdirent->d_name[0]=='.')
