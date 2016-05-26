@@ -208,8 +208,14 @@ void *download_chunk(void *download_info){
 	int received_size = 0 ;
 	char buffer[FILE_BUFFER_SIZE];
 	while((received_size = recv(download_seg->socket,buffer,FILE_BUFFER_SIZE,0)) > 0){
-		printf("writting to temp file  = %d bytes \n", received_size);
-		fwrite(buffer,received_size,1,download_seg->tempFile);
+		printf("writting to temp file  = %d bytes buffer = %s \n", received_size, buffer);
+		if(fwrite(buffer,received_size,1,download_seg->tempFile) < 0){
+			printf("file write error in temp file \n");
+			printf("unable to send segment to socket %d \n",download_seg->socket);
+			close(download_seg->socket);
+			pthread_exit(NULL);
+			return NULL;
+		}
 	}
 	printf("chunk download success \n");
 	download_seg->isSuccess = TRUE;
@@ -219,12 +225,19 @@ void *download_chunk(void *download_info){
 	return NULL;
 }
 void merge_temp_file(FILE *main_file, FILE *temp_file){
-	fseek(temp_file,0,SEEK_SET);
+	printf("merging temp file \n");
+	rewind(temp_file);
 	char buffer[FILE_BUFFER_SIZE];
-	int received_size = 0 ;
-	while((received_size = fread(buffer,FILE_BUFFER_SIZE,1,temp_file)) > 0){
-		fwrite(buffer,received_size,1,main_file);
+	while(!feof(temp_file)){
+		int received_size = fread(buffer, sizeof(char), FILE_BUFFER_SIZE, temp_file);
+		printf("read %d bytes from temp file \n", received_size);
+		if(received_size > 0){
+			if(fwrite(buffer,received_size,1,main_file) < 0 ){
+				printf("file write error in main file \n");
+			}
+		}
 	}
+	printf("merging temp file finished\n");
 }
 void *file_download_handler(void *file_info){
 	Node* file_node = (Node *) file_info;
@@ -248,13 +261,17 @@ void *file_download_handler(void *file_info){
 				printf("downloading chunk = %d \n",i);
 				pthread_create(&(multi_threads[i].thread), NULL, download_chunk,(void *)download_seg);
 			}
-			FILE *main_file = fopen(file_node->name,"a");
 			for(int i = 0 ; i < chunks ; i++){
-					pthread_join((multi_threads[i].thread),NULL);
+				pthread_join((multi_threads[i].thread),NULL);
+				fflush(stdout);
+				printf("chunk %d finished \n", i);
+				FILE *main_file = fopen(file_node->name,"a");
 					// merge the downloaded chunks
-					merge_temp_file(main_file,multi_threads[i].download_seg->tempFile);
-					fclose(multi_threads[i].download_seg->tempFile);
+				merge_temp_file(main_file,multi_threads[i].download_seg->tempFile);
+				fclose(multi_threads[i].download_seg->tempFile);
+				fclose(main_file);
 			}
+			printf("merge file success \n");
 		}
 	}
 	pthread_exit(NULL);
@@ -331,7 +348,7 @@ void start_peer_in_test() {
 	input_string("download file name\n", buffer, MAX_FILE_NAME_LEN);
 	Node *fileInfo = (Node *) malloc(sizeof(Node));
 	memcpy(fileInfo->name, buffer, MAX_FILE_NAME_LEN);
-	fileInfo->size = 19;
+	fileInfo->size = 60;
 	fileInfo->peernum = 1;
 	fileInfo->peerip[0] = (unsigned int) get_ip_address_hostname("tahoe.cs.dartmouth.edu");
 	download_file(fileInfo);
