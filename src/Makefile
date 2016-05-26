@@ -1,4 +1,4 @@
-all: peer/client  
+all: peer/client tracker/server
 
 utils/filetable.o: utils/filetable.c utils/filetable.h utils/constants.h
 	gcc -Wall -pedantic -std=c99 -g -c utils/filetable.c -o utils/filetable.o
@@ -20,11 +20,18 @@ peer/peer.o: peer/peer.c
 
 network/network_utils.o: network/network_utils.c
 	gcc -Wall -pedantic -std=c99 -g -c network/network_utils.c -o network/network_utils.o
+
 peer/p2p.o: peer/p2p.c
 	gcc -Wall -pedantic -std=c99 -g -c peer/p2p.c -o peer/p2p.o
 
 peer/client: peer_runner.c peer/peer.o peer/filemonitor.o peer/peer_peertable.o utils/filetable.o utils/seg.o network/network_utils.o peer/p2p.o
 	gcc -Wall -pedantic -std=c99 -g -pthread peer_runner.c peer/peer.o peer/filemonitor.o peer/peer_peertable.o utils/filetable.o utils/seg.o network/network_utils.o peer/p2p.o -o client
+
+tracker/tracker.o: tracker/tracker.c
+	gcc -Wall -pedantic -std=c99 -g -c tracker/tracker.c -o tracker/tracker.o
+
+tracker/server: tracker_runner.c tracker/tracker.o tracker/peertable.o utils/filetable.o utils/seg.o
+	gcc -Wall -pedantic -std=c99 -g -pthread tracker_runner.c tracker/tracker.o tracker/peertable.o utils/filetable.o utils/seg.o -o tracker/server
 
 clean:
 	rm -rf utils/*.o
@@ -32,4 +39,5 @@ clean:
 	rm -rf tracker/*.o
 	rm -rf network/*.o
 	rm -rf peer/client
+	rm -rf tracker/server
 
