@@ -20,6 +20,8 @@
 
 #define PEER_DOWNLOAD_PORT 4879
 
+#define TIMEOUT_SOCKET 5
+
 #define MAX_FILE_NUM 128
 
 #define MAX_FILE_NAME_LEN 128

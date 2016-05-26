@@ -16,7 +16,8 @@ int main(int argc, char *argv[]) {
 	if(argc > 2){
 		start_peer(argv);
 	}else{
-		printf("tracker IP address and root directory are required as input parameters");
+		printf("tracker IP address and root directory are required as input parameters \n starting in test mode\n");
+		start_peer_in_test();
 	}
 	return EXIT_SUCCESS;
 }

@@ -10,6 +10,8 @@ char tracker_host_name[100];
 
 #include "peer.h"
 #include "../utils/seg.h"
+#include "../utils/utils.c"
+#include "../peer/p2p.h"
 #include "../network/network_utils.h"
 #include "../utils/constants.h"
 //#include "filetable.h"
@@ -109,6 +111,7 @@ int peer_update_filetable(Node* recv,int recvnum){
 			//pthread_create(&peer_download_thread,NULL,peerdownload,(void*)recvfpt->name);
 			printf("Find new file: %s\n",recvnode->name);
 //			download_file(recvfpt);
+			download_file(recvnode);
 			num++;
 		}
 		else if(strcmp(recvnode->name,curfpt->name)>0){
@@ -186,15 +189,17 @@ typedef struct download_seg{
 } peerdownload_seg;
  */
 void *download_chunk(void *download_info){
+	printf("downloading chunk server port = %d\n",PEER_DOWNLOAD_PORT);
 	fflush(stdout);
 	peerdownload_seg *download_seg = (peerdownload_seg *) download_info;
 	download_seg->socket = get_client_socket_fd_ip(download_seg->peer_ip,PEER_DOWNLOAD_PORT);
+	printf("connection socket = %d \n", download_seg->socket);
 	if(download_seg->socket < 0){
 		printf("unable to get socket for chunk download \n");
 		pthread_exit(NULL);
 		return NULL;
 	}
-	if(send_p2p_seg(download_seg->socket,download_seg->seg) < 0){
+	if(send_p2p_seg(download_seg->socket,&download_seg->seg) < 0){
 		printf("unable to send segment to socket %d \n",download_seg->socket);
 		close(download_seg->socket);
 		pthread_exit(NULL);
@@ -203,6 +208,7 @@ void *download_chunk(void *download_info){
 	int received_size = 0 ;
 	char buffer[FILE_BUFFER_SIZE];
 	while((received_size = recv(download_seg->socket,buffer,FILE_BUFFER_SIZE,0)) > 0){
+		printf("writting to temp file  = %d bytes \n", received_size);
 		fwrite(buffer,received_size,1,download_seg->tempFile);
 	}
 	printf("chunk download success \n");
@@ -225,6 +231,7 @@ void *file_download_handler(void *file_info){
 	if(file_node){
 		int chunks = (file_node->size > file_node->peernum) ? file_node->peernum : file_node->size ;
 		if(chunks > 0){
+			printf("chunks available = %d \n",chunks);
 			temp_download_t multi_threads[chunks] ;
 			int chunk_size = file_node->size / chunks;
 			for(int i = 0 ; i < chunks ; i++){
@@ -238,16 +245,15 @@ void *file_download_handler(void *file_info){
 				download_seg->tempFile = tmpfile(); // assuming tempfile is unique and will not stored in the file monitor directory
 				download_seg->isSuccess = FALSE;
 				multi_threads[i].download_seg = download_seg;
-				pthread_create(&multi_threads[i].thread, NULL, download_chunk,(void *)download_seg);
+				printf("downloading chunk = %d \n",i);
+				pthread_create(&(multi_threads[i].thread), NULL, download_chunk,(void *)download_seg);
 			}
 			FILE *main_file = fopen(file_node->name,"a");
 			for(int i = 0 ; i < chunks ; i++){
-				if(multi_threads[i]){
-					pthread_join(multi_threads[i]);
+					pthread_join((multi_threads[i].thread),NULL);
 					// merge the downloaded chunks
 					merge_temp_file(main_file,multi_threads[i].download_seg->tempFile);
 					fclose(multi_threads[i].download_seg->tempFile);
-				}
 			}
 		}
 	}
@@ -259,7 +265,7 @@ int download_file(Node* file_node){
 	printf(" in download file \n");
 	if(file_node){
 		pthread_t peer_download_thread;
-		pthread_create(&peer_download_thread,NULL,peerdownload,(void*)file_node);
+		pthread_create(&peer_download_thread,NULL,file_download_handler,(void*)file_node);
 	}
 	return 0;
 }
@@ -302,10 +308,11 @@ void *file_upload_request_handler(){
 		pthread_exit(NULL);
 		return NULL;
 	}
-	struct sockaddr client_address ;
+	struct sockaddr_in client_address ;
 	int addr_length = sizeof(struct sockaddr);
+	printf("waiting for an upload request on port %d \n",PEER_DOWNLOAD_PORT);
 	while(1){
-		int new_connection = accept(server_sock_fd, (struct sockaddr*)&client_address, &addr_length);
+		int new_connection = accept(server_sock_fd, (struct sockaddr_in *)&client_address, (socklen_t *) &addr_length);
 		printf("received a new upload request %d \n",new_connection);
 		if(new_connection > 0){
 			// create a new thread for the upload handler and
@@ -317,7 +324,21 @@ void *file_upload_request_handler(){
 	}
 	return NULL;
 }
+void start_peer_in_test() {
+	pthread_t file_upload_thread;
+	pthread_create(&file_upload_thread, NULL, file_upload_request_handler,NULL);
+	char buffer[MAX_FILE_NAME_LEN];
+	input_string("download file name\n", buffer, MAX_FILE_NAME_LEN);
+	Node *fileInfo = (Node *) malloc(sizeof(Node));
+	memcpy(fileInfo->name, buffer, MAX_FILE_NAME_LEN);
+	fileInfo->size = 19;
+	fileInfo->peernum = 1;
+	fileInfo->peerip[0] = (unsigned int) get_ip_address_hostname("tahoe.cs.dartmouth.edu");
+	download_file(fileInfo);
+	while(1){
 
+	}
+}
 void start_peer(char *argv[]){
 	//TODO need to figure out the use of arguments
 

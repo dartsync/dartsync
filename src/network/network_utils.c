@@ -7,6 +7,7 @@
  Description : utility for network operations
  ============================================================================
  */
+#define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -72,7 +73,7 @@ int get_client_socket_fd(char* hostName, int portNumber){
 	serverAddress = gethostbyname(hostName);
 	bzero(&server_addr, sizeof(struct sockaddr_in));
 	server_addr.sin_family = AF_INET;
-    bcopy((char *)serverAddress->h_addr, (char *)&server_addr.sin_addr.s_addr, serverAddress->h_length);
+    bcopy((char *)serverAddress->h_addr_list[0], (char *)&server_addr.sin_addr.s_addr, serverAddress->h_length);
     server_addr.sin_port = htons(portNumber);
     if(connect(socketFD,(struct sockaddr *)&server_addr,sizeof(server_addr)) < 0){
         printf("connection failed to %s",hostName);
@@ -83,11 +84,14 @@ int get_client_socket_fd(char* hostName, int portNumber){
 }
 
 int get_client_socket_fd_ip(unsigned int ip_address, int portNumber){
+	fflush(stdout);
+	printf("get_client_socket_fd_ip \n");
 	struct sockaddr_in server_addr;
     bzero(&server_addr, sizeof(struct sockaddr_in));
 	struct in_addr in;
 	in.s_addr = (unsigned int)ip_address;
 	int socketFD = socket(AF_INET, SOCK_STREAM, 0);
+	printf("socket allocated \n");
 	if(socketFD < 0 ){
 		printf("Error in creating a new socket\n");
 		return socketFD;
@@ -99,11 +103,22 @@ int get_client_socket_fd_ip(unsigned int ip_address, int portNumber){
 		printf("create_client_socket(): Server IP address error!\n");
 		return -1;
 	}
+	printf("requesting connection ...\n");
+	struct timeval timeout;
+	    timeout.tv_sec = TIMEOUT_SOCKET;
+	    timeout.tv_usec = 0;
+	if (setsockopt (socketFD, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0){
+		printf("setsockopt failed\n");
+	}
+	if (setsockopt (socketFD, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,sizeof(timeout)) < 0){
+		printf("setsockopt failed\n");
+	}
 	if(connect(socketFD,(struct sockaddr *)&server_addr,sizeof(server_addr)) < 0){
 		printf("connection failed to %d",ip_address);
 		close(socketFD);
 		return -1;
 	}
+	fflush(stdout);
 	return socketFD;
 }
 
@@ -129,7 +144,20 @@ unsigned long get_peer_address_l(int socketFD) {
     get_peer_address(socketFD,ip_address,15);
     return inet_addr(ip_address);
 }
-
+unsigned int get_ip_address_hostname(char* hostname)
+{
+  struct hostent *hostInfo;
+  hostInfo = gethostbyname(hostname);
+  if(!hostInfo) {
+  	printf("error in getting host name from string for %s \n", hostname);
+  	return -1;
+  }
+  struct sockaddr_in servaddr;
+  memcpy((char *) &servaddr.sin_addr.s_addr, hostInfo->h_addr_list[0], hostInfo->h_length);
+//  printf("ip_Address = %s ");
+  printf("ip_Address = %d ", servaddr.sin_addr.s_addr);
+  return servaddr.sin_addr.s_addr;
+}
 /*
  * returns peer ip address for a socketFD
  */

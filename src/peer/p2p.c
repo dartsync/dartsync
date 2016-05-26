@@ -13,61 +13,13 @@
 #include <pthread.h>
 #include <unistd.h>
 #include "../utils/constants.h"
+#include "p2p.h"
+
 int send_p2p_seg(int network_conn, peer2peer_seg* send_seg){
 	return send(network_conn,send_seg,sizeof(peer2peer_seg),0);
 }
 
 
-
-void peerdownload(void* arg){
-	peerdownload_seg* download=(peerdownload_seg*)arg;
-	peer2peer_seg send_seg=(peer2peer_seg*)malloc(sizeof(peer2peer_seg));
-
-	int peer_conn=download->socket;
-	int startidx=download->seg->start_idx;
-	int piece_len=download->seg->piece_len;
-	int endidx=download->seg->end_idx;
-
-	memcpy();
-	send_seg->piece_len=piece_len;
-	send_seg->start_idx=startidx;
-	send_seg->end_idx=endidx;
-
-	int filelen = send_seg->end_idx - send_seg->start_idx;
-	if(peer_conn<0){
-		printf("download thread error: wrong network socket\n");
-	}
-	//send file info to target peer
-	send_p2p_seg(peer_conn,send_seg);
-	printf("Peer download thread: start download file from remote peer\n");
-	int downloaded_size=0;
-	char* buf=(char*)malloc(filelen);
-	FILE *fp = NULL;
-	char recvfilename[MAX_FILE_NAME_LEN];
-	sprintf(recvfilename,"%s_%d_%d~",download->seg.file_name,startidx,endidx);
-	char recvbuf[filelen];
-	int recv_len=0;
-	fp=fopen(recvfilename, "a");
-	if ((fp = fopen()) == NULL) {
-        printf("Fail to open file\n");
-    }
-
-	while(recv_len<filelen){
-		//memset();
-		int tmp;
-		bzero(recvbuf,sizeof(recvbuf));
-		if(tmp=recv(peer_conn,recvbuf+recv_len,sizeof(recvbuf)-recv_len,0)<=0){
-			printf("receive data fail\n");
-		}
-		recv_len+=tmp;
-
-	}
-	fwrite(recvbuf,sizeof(char),,fp);
-	
-	close(peer_conn);
-	fclose(fp);
-	pthread_exit(NULL);
-}
 /**
  * will return the next chunk size to be uploaded
  */
@@ -83,12 +35,13 @@ int get_chunk_size(int total_sent, int size) {
 }
 void *p2p_upload(void* arg){
 	fflush(stdout);
-	int sock_fd = (int *) arg;
+	int *sock_fd_p = (int *) arg;
+	int sock_fd = *sock_fd_p;
 	if(sock_fd < 0 ){
 		printf("Error in p2p_upload socket fd = %d\n", sock_fd);
 		pthread_exit(NULL);
 	}
-	peer2peer_seg header = (peer2peer_seg * ) malloc(sizeof(peer2peer_seg));
+	peer2peer_seg *header = (peer2peer_seg * ) malloc(sizeof(peer2peer_seg));
 	bzero(header, sizeof(peer2peer_seg));
 	if(recv(sock_fd,header,sizeof(peer2peer_seg),0) < 0){
 		close(sock_fd);
@@ -125,4 +78,5 @@ void *p2p_upload(void* arg){
     free(header);
 	close(sock_fd);
 	fflush(stdout);
+	return NULL;
 }

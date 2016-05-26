@@ -18,8 +18,13 @@ utils/seg.o: utils/seg.c
 peer/peer.o: peer/peer.c
 	gcc -Wall -pedantic -std=c99 -g -c peer/peer.c -o peer/peer.o
 
-peer/client: peer_runner.c peer/peer.o peer/filemonitor.o peer/peer_peertable.o utils/filetable.o utils/seg.o
-	gcc -Wall -pedantic -std=c99 -g -pthread peer_runner.c peer/peer.o peer/filemonitor.o peer/peer_peertable.o utils/filetable.o utils/seg.o -o peer/client
+network/network_utils.o: network/network_utils.c
+	gcc -Wall -pedantic -std=c99 -g -c network/network_utils.c -o network/network_utils.o
+peer/p2p.o: peer/p2p.c
+	gcc -Wall -pedantic -std=c99 -g -c peer/p2p.c -o peer/p2p.o
+
+peer/client: peer_runner.c peer/peer.o peer/filemonitor.o peer/peer_peertable.o utils/filetable.o utils/seg.o network/network_utils.o peer/p2p.o
+	gcc -Wall -pedantic -std=c99 -g -pthread peer_runner.c peer/peer.o peer/filemonitor.o peer/peer_peertable.o utils/filetable.o utils/seg.o network/network_utils.o peer/p2p.o -o client
 
 clean:
 	rm -rf utils/*.o
