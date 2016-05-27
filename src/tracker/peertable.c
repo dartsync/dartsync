@@ -68,6 +68,7 @@ int peer_table_delete(peer_table *table, const char* ip_addr){
             table->peer_num--;
             return 1;
         }
+	p=p->next;
     }
     
     return -1;
@@ -83,6 +84,7 @@ int peer_table_update_timestamp(peer_table *table, int conn){
             p->last_time_stamp = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
             return 1;
         }
+	p=p->next;
     }
     return -1;
 }
@@ -90,8 +92,10 @@ int peer_table_update_timestamp(peer_table *table, int conn){
 void peer_table_print(peer_table *table){
     printf("------The contents of the peer table------\n");
     tracker_peer_t *p = table->head;
-    while(p != NULL)
+    while(p != NULL){
         printf("IP address: %s, connection port: %d\n", p->ip, p->sockfd);
+	p=p->next;
+    }
     printf("\n");
 }
 

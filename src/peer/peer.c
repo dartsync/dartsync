@@ -29,7 +29,7 @@ int connectToTracker(){
   servaddr.sin_family =AF_INET;
   servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
   servaddr.sin_port = htons(TRACKER_PORT);
-  out_conn = socket(AF_INET,SOCK_STREAM,0);
+  out_conn = socket(AF_INET,SOCK_STREAM,6);
 
   if(out_conn<0) {
 	printf("Create socket error\n");
