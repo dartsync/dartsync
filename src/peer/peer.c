@@ -101,7 +101,16 @@ int peer_update_filetable(Node* recv,int recvnum){
 	int curnum=filetable->filenum;
 	int num=0;
 	Node* recvfpt=recv;
-	Node* curfpt=filetable;
+	Node* curfpt=filetable->file	;
+	printf("in peer_update_filetable:");
+	
+	Node* tmp=recv;
+	int n;
+	for(n=0;n<recvnum;n++){
+		printf("name: %s",tmp->name);
+		tmp++;
+	}
+
 	int i=0;
 	// file mutex
 	while(num<recvnum&&curfpt!=NULL){
@@ -359,8 +368,9 @@ void start_peer_in_test() {
 void start_peer(char *argv[]){
 	//TODO need to figure out the use of arguments
 
-	char filename[1024];
+	char filename[128];
 	readConfigFile(&filename);
+//	char* filename="../sync";
 	printf("Get sync dir: %s\n",filename);
 
 	filetable=filetable_init(filename);
@@ -392,9 +402,12 @@ void start_peer(char *argv[]){
 		ttp_seg_t recvseg;
 		if(peer_recvseg(network_conn,&recvseg)<0){
   			printf("Receive filetable error\n");
+			continue;
   		}
   		printf("Received segment from tracker\n");
   		printf("Received filetable size: %d \n",recvseg.file_table_size);
+		
+
   		peer_update_filetable(recvseg.file_table,recvseg.file_table_size);
 	}
 

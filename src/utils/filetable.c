@@ -13,23 +13,24 @@ peer_file_table* filetable_init(char* directory){
 	newfiletable->filenum=0;
 	newfiletable->file=NULL;
 
-	struct stat attrib;
+    struct stat attrib;
     struct dirent *pdirent;
     DIR *pdir;
     int filenum=0;
 
     pdir = opendir (directory);
     if (pdir == NULL) {
-        printf ("Cannot open base directory \n");
+        perror ("Cannot open sync dir: ");
         return NULL;
     }
     while ((pdirent = readdir(pdir)) != NULL) {
 		if(pdirent->d_name[0]=='.')
 			continue;
 		filenum++;
-//	    printf ("[%s]\n", pdirent->d_name);
 	    if (pdirent->d_type == FILE_TYPE) {
-		    stat(pdirent->d_name, &attrib);
+			char path[100];
+		        sprintf(path,"%s/%s",directory,pdirent->d_name);
+		        stat(path, &attrib);
 			//strftime(date, 128, "%y-%m-%d %H:%M", localtime(&(attrib.st_ctime)));
 			filetable_addnode(newfiletable, attrib.st_size, pdirent->d_name, attrib.st_mtime);
 		}
@@ -160,7 +161,12 @@ void filetable_print(peer_file_table* ptable){
 	printf("Dir file number: %d\n",ptable->filenum);
 	Node* tmp=ptable->file;
 	while(tmp!=NULL){
-		printf("Filename:%s size:%d timestamp: %u peernum: %d\n",tmp->name,tmp->size,tmp->timestamp,tmp->peernum);
+		printf("Filename:%s size:%d timestamp: %u peernum: %d \n",tmp->name,tmp->size,tmp->timestamp,tmp->peernum);
+		int i;
+		for(i=0;i<tmp->peernum;i++){
+			printf("IP: %u   ",tmp->peerip[i]);
+		}
+		printf("\n");
 		tmp=tmp->pNext;
 	}
 	printf("Return\n");

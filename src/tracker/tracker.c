@@ -4,6 +4,7 @@
 //
 // Date: May 19,2016
 
+#include "sys/time.h"
 #include "tracker.h"
 
 #define MAX_LISTEN_PEER 10
@@ -17,7 +18,6 @@ pthread_mutex_t *file_tb_mutex;
 
 void* monitor_alive(){
     char ip_addr[IP_LEN];
-    printf("In monitor_alive thread\n");
     while(lis_hdshake_conn > 0){
         struct timeval currentTime;
         gettimeofday(&currentTime, NULL);
@@ -88,7 +88,7 @@ void* listen_handshake(void* arg){
                 break;
                 
             case KEEP_ALIVE:
-                printf("received keep alive pkg\n");
+                //printf("received keep alive pkg\n");
                 pthread_mutex_lock(peer_tb_mutex);
                 peer_table_update_timestamp(peer_tb, conn);
                 pthread_mutex_unlock(peer_tb_mutex);

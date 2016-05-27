@@ -4,6 +4,7 @@
 //
 // Date: May 19,2016
 
+#include "sys/time.h"
 #include "peertable.h"
 
 peer_table* peer_table_create(){

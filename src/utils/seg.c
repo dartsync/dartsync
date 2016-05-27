@@ -154,7 +154,6 @@ int tracker_recvseg(int network_conn, ptt_seg_t* recvseg){
 			if(c=='#') {
 				buf[idx]=c;
 				idx++;
-				printf("Memcpy :\n");
 				memcpy(recvseg,buf,idx-2);
 				state = 0;
 				idx = 0;
