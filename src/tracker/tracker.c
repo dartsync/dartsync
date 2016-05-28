@@ -138,6 +138,9 @@ int broadcast_filetable(ttp_seg_t* sendpkg){
     int i=0;
     for(i=0;i<fnum;i++){
         memcpy(sendpkg->file_table+i,sendfnode,sizeof(Node));
+        printf("name: %s\n",sendfnode->name);
+        printf("timestamp: %lu\n",sendfnode->timestamp);
+        printf("IP: %u\n",sendfnode->peerip);
         sendfnode=sendfnode->pNext;
     }
 
