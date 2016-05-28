@@ -1,4 +1,4 @@
-#include "filetable.h"
+ #include "filetable.h"
 
 peer_file_table* file_table_create(){
 	peer_file_table* newfiletable=(peer_file_table*)malloc(sizeof(peer_file_table));
