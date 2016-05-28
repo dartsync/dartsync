@@ -27,9 +27,9 @@ int connectToTracker(){
   int out_conn;
   struct sockaddr_in servaddr;
   servaddr.sin_family =AF_INET;
-  servaddr.sin_addr.s_addr= inet_addr("129.170.212.204");
+  servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
   servaddr.sin_port = htons(TRACKER_PORT);
-  out_conn = socket(AF_INET,SOCK_STREAM,0);
+  out_conn = socket(AF_INET,SOCK_STREAM,6);
 
   if(out_conn<0) {
 	printf("Create socket error\n");
@@ -102,12 +102,12 @@ int peer_update_filetable(Node* recv,int recvnum){
 	int num=0;
 	Node* recvfpt=recv;
 	Node* curfpt=filetable->file	;
-	printf("in peer_update_filetable:\n");
+	printf("in peer_update_filetable:");
 	
 	Node* tmp=recv;
 	int n;
 	for(n=0;n<recvnum;n++){
-		printf("name: %s\n",tmp->name);
+		printf("name: %s",tmp->name);
 		tmp++;
 	}
 
@@ -119,11 +119,6 @@ int peer_update_filetable(Node* recv,int recvnum){
 			//pthread_t peer_download_thread;
 			//pthread_create(&peer_download_thread,NULL,peerdownload,(void*)recvfpt->name);
 			printf("Find new file: %s\n",recvnode->name);
-			int i;
-			printf("IPnum: %s\n",recvnode->name);
-			for(i=0;i<recvnode->peernum;i++){
-				printf("Target file IP : %u\n",recvnode->peerip+i);
-			}
 //			download_file(recvfpt);
 			download_file(recvnode);
 			num++;
@@ -146,22 +141,6 @@ int peer_update_filetable(Node* recv,int recvnum){
 				curfpt=curfpt->pNext;
 			}
 		}
-	}
-
-	while(num<recvnum){
-		Node* recvnode=recv+num;
-		printf("Find new file: %s\n",recvnode->name);
-		for(i=0;i<recvnode->peernum;i++){
-				printf("Target file IP : %u\n",recvnode->peerip+i);
-		}
-		download_file(recvnode);
-		num++;
-	}
-	while(curfpt!=NULL){
-		printf("Delete file: %s\n",curfpt->name);
-		remove(curfpt->name);
-		fileDeleted(filetable, curfpt->name);
-		curfpt=curfpt->pNext;
 	}
 
 }
@@ -427,12 +406,7 @@ void start_peer(char *argv[]){
   		}
   		printf("Received segment from tracker\n");
   		printf("Received filetable size: %d \n",recvseg.file_table_size);
-		int i=0;
-		for(i=0;i<recvseg.file_table_size;i++){
-			Node* tmp=recvseg.file_table+i;
-			printf("name: %s\n",tmp->name);
-			printf("IP: %u \n",tmp->peerip);
-		}
+		
 
   		peer_update_filetable(recvseg.file_table,recvseg.file_table_size);
 	}
