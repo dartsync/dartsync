@@ -46,7 +46,7 @@ peer_file_table* filetable_init(char* directory){
     return newfiletable;
 }
 int filetable_addnode(peer_file_table* ptable, int size, char* name, unsigned long int timestamp){
-	unsigned int ip=getmyip();
+	unsigned int ip=(unsigned int)getmyip();
 	ptable->filenum++;
 	Node* tmp=ptable->file;
 
@@ -172,16 +172,29 @@ void filetable_print(peer_file_table* ptable){
 	printf("Return\n");
 }
 
-unsigned int getmyip(){
-  char myhostName[50];
-  struct hostent *hostInfo;
-  if (gethostname(myhostName, sizeof(myhostName)) == 0) {
-  	hostInfo = gethostbyname(myhostName);
-  }
-  else{
-  	printf("In function getip: gethostname error\n");
-  }
-  struct in_addr* addr=(struct in_addr *)hostInfo->h_addr_list[0];
-  char* ip = inet_ntoa (*addr);
-  return inet_addr(ip);
+unsigned long getmyip(){
+//	char hostname[100];
+//	hostname[99]="\0";
+	char* hostname="129.170.212.204";
+//	gethostname(hostname,sizeof(hostname)); // get the ip address of local machine
+	struct hostent *hostInfo;
+  	hostInfo = gethostbyname(hostname);
+  	if(!hostInfo) {
+  		printf("error in getting host name from string for %s \n", hostname);
+  		return -1;
+  	}
+  	struct sockaddr_in servaddr;
+  	memcpy((char *) &servaddr.sin_addr.s_addr, hostInfo->h_addr_list[0], hostInfo->h_length);
+  	return servaddr.sin_addr.s_addr;
+//	return inet_addr(ip);
+}
+
+void print_ip(int ip)
+{
+    unsigned char bytes[4];
+    bytes[0] = ip & 0xFF;
+    bytes[1] = (ip >> 8) & 0xFF;
+    bytes[2] = (ip >> 16) & 0xFF;
+    bytes[3] = (ip >> 24) & 0xFF;	
+    printf("%d.%d.%d.%d\n", bytes[3], bytes[2], bytes[1], bytes[0]);        
 }

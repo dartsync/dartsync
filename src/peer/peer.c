@@ -16,6 +16,7 @@ char tracker_host_name[100];
 #include "../utils/constants.h"
 //#include "filetable.h"
 
+char dirname[128];
 int heartbeat_interval;
 int piece_len;
 int network_conn=-1;
@@ -365,15 +366,19 @@ void start_peer_in_test() {
 
 	}
 }
+
+char* get_dir(){
+	return dirname;
+}
+
 void start_peer(char *argv[]){
 	//TODO need to figure out the use of arguments
 
-	char filename[128];
-	readConfigFile(&filename);
+	readConfigFile(&dirname);
 //	char* filename="../sync";
-	printf("Get sync dir: %s\n",filename);
+	printf("Get sync dir: %s\n",dirname);
 
-	filetable=filetable_init(filename);
+	filetable=filetable_init(dirname);
 	filetable_print(filetable);
 	//peertable=peertable_init();
 	
@@ -383,13 +388,13 @@ void start_peer(char *argv[]){
 		printf("Connect to Tracker fail \n");
 		exit(0);
 	}
-    signal(SIGINT, peer_stop);
+    	signal(SIGINT, peer_stop);
 
-    pthread_t alive_thread;
-    pthread_create(&alive_thread,NULL,heartbeat,(void*)0);
+	pthread_t alive_thread;
+    	pthread_create(&alive_thread,NULL,heartbeat,(void*)0);
 
 	pthread_t file_monitor_thread;
-	pthread_create(&file_monitor_thread,NULL,filemonitor,(void*)filename);
+	pthread_create(&file_monitor_thread,NULL,filemonitor,(void*)dirname);
 
 	/**
 	 * starting thread for listening to upload request
