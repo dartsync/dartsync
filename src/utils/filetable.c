@@ -108,7 +108,39 @@ int filetable_modifynode(peer_file_table* ptable, int size, char* name, unsigned
 			tmp=tmp->pNext;
 		}
 	}
-return -1;
+	return -1;
+}
+
+int file_table_deleteip(peer_file_table* ptable, unsigned int ip){
+	Node* tmp=ptable->file;
+	if(tmp==NULL){
+		printf("Delete ip error \n");
+		return -1;
+	}
+	while(tmp!=NULL){
+		if(tmp->peernum==1){
+			if(tmp->peerip[0]==ip){
+				// if there exits a node which only this ip has, then delete the node
+				filetable_delnode(ptable,tmp->size,tmp->name,tmp->timestamp);
+			}
+			else{
+				printf("Delete ip error \n");
+				return -1;
+			}
+		}
+		else{
+			int i;
+			for(i=0;i<tmp->peernum;i++){
+				if(tmp->peerip[i]==ip){
+					tmp->peernum--;
+					tmp->peerip[i]=tmp->peerip[tmp->peernum];
+				}
+			}
+		}
+
+		tmp=tmp->pNext;
+	}
+	return 1;
 }
 
 int filetable_delnode(peer_file_table* ptable, int size, char* name, unsigned long int timestamp){
@@ -142,7 +174,7 @@ int filetable_delnode(peer_file_table* ptable, int size, char* name, unsigned lo
 			next=next->pNext;
 		}
 	}
-return -1;	
+	return -1;	
 }
 
 void filetable_destroy(peer_file_table* table){

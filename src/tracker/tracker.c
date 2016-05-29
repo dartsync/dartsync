@@ -18,6 +18,8 @@ pthread_mutex_t *file_tb_mutex;
 
 void* monitor_alive(){
     char ip_addr[IP_LEN];
+    ttp_seg_t sendpkg;
+
     while(lis_hdshake_conn > 0){
         struct timeval currentTime;
         gettimeofday(&currentTime, NULL);
@@ -41,22 +43,15 @@ void* monitor_alive(){
                 strncpy(ip_addr, p->ip, IP_LEN);
                 close(p->sockfd);
                 peer_table_delete(peer_tb, ip_addr);
-//                file_table_delete(file_tb, ip_addr);
+                file_table_deleteip(file_tb, ip_addr);
                 change = 1;
             }
             p = p->next;
         }
         if(change){
             // send broadcast
-            p = peer_tb->head;
-            while(p != NULL){
-                //send(pkt, p->conn);
-                /*################
-                 ################
-                 need to fill...
-                 ################
-                 ################*/
-		p=p->next;
+            if(broadcast_filetable(&sendpkg)<0){
+                printf("Send broadcast pkg error\n");
             }
             
             peer_table_print(peer_tb);

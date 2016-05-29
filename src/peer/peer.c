@@ -250,7 +250,10 @@ void merge_temp_file(FILE *main_file, FILE *temp_file){
 	printf("merging temp file finished\n");
 }
 void *file_download_handler(void *file_info){
+	char filename[256];
 	Node* file_node = (Node *) file_info;
+	sprintf(filename,"%s/%s",dirname,file_node->name);
+
 	if(file_node){
 		int chunks = (file_node->size > file_node->peernum) ? file_node->peernum : file_node->size ;
 		if(chunks > 0){
@@ -275,7 +278,7 @@ void *file_download_handler(void *file_info){
 				pthread_join((multi_threads[i].thread),NULL);
 				fflush(stdout);
 				printf("chunk %d finished \n", i);
-				FILE *main_file = fopen(file_node->name,"a");
+				FILE *main_file = fopen(filename,"a");
 					// merge the downloaded chunks
 				merge_temp_file(main_file,multi_threads[i].download_seg->tempFile);
 				fclose(multi_threads[i].download_seg->tempFile);
