@@ -56,10 +56,16 @@ public class Client implements FileMonitorListener{
 	public static void main(String[] args) {
 		String trackerAddress = TRACKER_ADDRESS ;
 		File rootDir = null ;
-		if(args!= null && args.length >= 2){
-			trackerAddress = args[0];
-			rootDir = new File(args[1]);
-			rootDir.mkdir();
+		if(args!= null){
+			if(args.length >=2){
+				rootDir = new File(args[1]);
+				rootDir.mkdir();
+				trackerAddress = args[0];
+			}else if(args.length >= 1){
+				trackerAddress = args[0];
+			}else{
+				rootDir = FileMonitor.getDefaultRootDir(); 
+			}
 		}else{
 			rootDir = FileMonitor.getDefaultRootDir(); 
 		}
