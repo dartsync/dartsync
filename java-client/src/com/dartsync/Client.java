@@ -139,7 +139,7 @@ public class Client implements FileMonitorListener{
 	public void startClient(){
 		fileMonitor = new FileMonitor(rootDir, null, this);
 		fileMonitor.start();
-		heartBeatThread = new HeartBeat(trackerInfo.socket);
+		heartBeatThread = new HeartBeat(trackerInfo.socket,trackerInfo.heartBeatInterval);
 		heartBeatThread.start();
 		try {
 			if(heartBeatThread != null && heartBeatThread.isAlive()) heartBeatThread.join();

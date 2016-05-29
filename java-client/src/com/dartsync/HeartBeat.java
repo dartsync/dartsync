@@ -14,8 +14,10 @@ import java.net.Socket;
 public class HeartBeat extends Thread {
 	
 	private Socket trackerSocket = null;
+	private int interval ;
 	
-	public HeartBeat(Socket tracerSocket){
+	public HeartBeat(Socket tracerSocket, int interval){
+		this.interval = interval;
 		this.trackerSocket = tracerSocket;
 	}
 	
@@ -24,7 +26,7 @@ public class HeartBeat extends Thread {
 		try{
 			while(trackerSocket != null && trackerSocket.isConnected()){
 				System.out.println("heartbeat thread sleeping");
-				Thread.sleep(Constants.HEART_BEAT_DURATION_MILLIS);
+				Thread.sleep(interval);
 				sendHeartBeat();
 			}
 		}catch(InterruptedException ex){
