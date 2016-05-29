@@ -16,6 +16,7 @@ char tracker_host_name[100];
 #include "../utils/constants.h"
 //#include "filetable.h"
 
+char dirname[128];
 int heartbeat_interval;
 int piece_len;
 int network_conn=-1;
@@ -29,7 +30,7 @@ int connectToTracker(){
   servaddr.sin_family =AF_INET;
   servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
   servaddr.sin_port = htons(TRACKER_PORT);
-  out_conn = socket(AF_INET,SOCK_STREAM,0);
+  out_conn = socket(AF_INET,SOCK_STREAM,6);
 
   if(out_conn<0) {
 	printf("Create socket error\n");
@@ -101,7 +102,16 @@ int peer_update_filetable(Node* recv,int recvnum){
 	int curnum=filetable->filenum;
 	int num=0;
 	Node* recvfpt=recv;
-	Node* curfpt=filetable;
+	Node* curfpt=filetable->file	;
+	printf("in peer_update_filetable:");
+	
+	Node* tmp=recv;
+	int n;
+	for(n=0;n<recvnum;n++){
+		printf("name: %s",tmp->name);
+		tmp++;
+	}
+
 	int i=0;
 	// file mutex
 	while(num<recvnum&&curfpt!=NULL){
@@ -240,7 +250,10 @@ void merge_temp_file(FILE *main_file, FILE *temp_file){
 	printf("merging temp file finished\n");
 }
 void *file_download_handler(void *file_info){
+	char filename[256];
 	Node* file_node = (Node *) file_info;
+	sprintf(filename,"%s/%s",dirname,file_node->name);
+
 	if(file_node){
 		int chunks = (file_node->size > file_node->peernum) ? file_node->peernum : file_node->size ;
 		if(chunks > 0){
@@ -265,7 +278,7 @@ void *file_download_handler(void *file_info){
 				pthread_join((multi_threads[i].thread),NULL);
 				fflush(stdout);
 				printf("chunk %d finished \n", i);
-				FILE *main_file = fopen(file_node->name,"a");
+				FILE *main_file = fopen(filename,"a");
 					// merge the downloaded chunks
 				merge_temp_file(main_file,multi_threads[i].download_seg->tempFile);
 				fclose(multi_threads[i].download_seg->tempFile);
@@ -356,14 +369,19 @@ void start_peer_in_test() {
 
 	}
 }
+
+char* get_dir(){
+	return dirname;
+}
+
 void start_peer(char *argv[]){
 	//TODO need to figure out the use of arguments
 
-	char filename[1024];
-	readConfigFile(&filename);
-	printf("Get sync dir: %s\n",filename);
+	readConfigFile(&dirname);
+//	char* filename="../sync";
+	printf("Get sync dir: %s\n",dirname);
 
-	filetable=filetable_init(filename);
+	filetable=filetable_init(dirname);
 	filetable_print(filetable);
 	//peertable=peertable_init();
 	
@@ -373,13 +391,13 @@ void start_peer(char *argv[]){
 		printf("Connect to Tracker fail \n");
 		exit(0);
 	}
-    signal(SIGINT, peer_stop);
+    	signal(SIGINT, peer_stop);
 
-    pthread_t alive_thread;
-    pthread_create(&alive_thread,NULL,heartbeat,(void*)0);
+	pthread_t alive_thread;
+    	pthread_create(&alive_thread,NULL,heartbeat,(void*)0);
 
 	pthread_t file_monitor_thread;
-	pthread_create(&file_monitor_thread,NULL,filemonitor,(void*)filename);
+	pthread_create(&file_monitor_thread,NULL,filemonitor,(void*)dirname);
 
 	/**
 	 * starting thread for listening to upload request
@@ -392,9 +410,12 @@ void start_peer(char *argv[]){
 		ttp_seg_t recvseg;
 		if(peer_recvseg(network_conn,&recvseg)<0){
   			printf("Receive filetable error\n");
+			continue;
   		}
   		printf("Received segment from tracker\n");
   		printf("Received filetable size: %d \n",recvseg.file_table_size);
+		
+
   		peer_update_filetable(recvseg.file_table,recvseg.file_table_size);
 	}
 

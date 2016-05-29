@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include "../utils/constants.h"
 #include "p2p.h"
+#include "peer.h"
 
 int send_p2p_seg(int network_conn, peer2peer_seg* send_seg){
 	return send(network_conn,send_seg,sizeof(peer2peer_seg),0);
@@ -34,6 +35,9 @@ int get_chunk_size(int total_sent, int size) {
 	return chunk_size;
 }
 void *p2p_upload(void* arg){
+	char filename[256];
+	char* directory=get_dir();
+
 	fflush(stdout);
 	int *sock_fd_p = (int *) arg;
 	int sock_fd = *sock_fd_p;
@@ -45,19 +49,23 @@ void *p2p_upload(void* arg){
 	bzero(header, sizeof(peer2peer_seg));
 	if(recv(sock_fd,header,sizeof(peer2peer_seg),0) < 0){
 		close(sock_fd);
-	    free(header);
+	    	free(header);
 		printf("Error in p2p_upload recv ERROR  \n");
 		pthread_exit(NULL);
 	}
+
+	sprintf(filename,"%s/%s",directory,header->file_name);
+
 	int offset = header->start_idx;
 	int size = header->piece_len;
-	printf("uploading file %s requested size = %d & offset = %d \n",header->file_name, size, offset);
-	FILE *upload_file = fopen(header->file_name, "r");
+	printf("uploading file %s requested size = %d & offset = %d \n",filename, size, offset);
+	FILE *upload_file = fopen(filename, "r");
 	if (upload_file == NULL || fseek(upload_file,offset,SEEK_SET) != 0)  {
 	    free(header);
-	   printf("File requested is not available :- %s , file not found or seek error \n", header->file_name);
+	    printf("File requested is not available :- %s , file not found or seek error \n", filename);
 	}
 	printf("sending file to peer");
+
 	int total_sent = 0 ;
 	char file_buffer[FILE_BUFFER_SIZE];
 	while(total_sent < size){
@@ -70,12 +78,13 @@ void *p2p_upload(void* arg){
 			printf("Error in reading from file chunk_size = %d \n",chunk_size);
 			fclose(upload_file);
 			close(sock_fd);
-		    free(header);
+		    	free(header);
 			pthread_exit(NULL);
 		}
 	}
+
 	fclose(upload_file);
-    free(header);
+    	free(header);
 	close(sock_fd);
 	fflush(stdout);
 	return NULL;

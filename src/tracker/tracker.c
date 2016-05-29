@@ -4,6 +4,7 @@
 //
 // Date: May 19,2016
 
+#include "sys/time.h"
 #include "tracker.h"
 
 #define MAX_LISTEN_PEER 10
@@ -17,7 +18,8 @@ pthread_mutex_t *file_tb_mutex;
 
 void* monitor_alive(){
     char ip_addr[IP_LEN];
-    printf("In monitor_alive thread\n");
+    ttp_seg_t sendpkg;
+
     while(lis_hdshake_conn > 0){
         struct timeval currentTime;
         gettimeofday(&currentTime, NULL);
@@ -34,34 +36,29 @@ void* monitor_alive(){
 
         while(p != NULL){
             // memset(ip_addr, 0, sizeof(char) * IP_LEN);
+	    printf("time: time %lu last time: %lu \n",time,p->last_time_stamp);
             if(time - p->last_time_stamp >= HEARTBEAT_INTERVAL * 1000000){
                 printf("Peer time out\n");
                 memset(ip_addr, 0, IP_LEN);
                 strncpy(ip_addr, p->ip, IP_LEN);
                 close(p->sockfd);
                 peer_table_delete(peer_tb, ip_addr);
-//                file_table_delete(file_tb, ip_addr);
+                file_table_deleteip(file_tb, ip_addr);
                 change = 1;
             }
             p = p->next;
         }
         if(change){
             // send broadcast
-            p = peer_tb->head;
-            while(p != NULL){
-                //send(pkt, p->conn);
-                /*################
-                 ################
-                 need to fill...
-                 ################
-                 ################*/
+            if(broadcast_filetable(&sendpkg)<0){
+                printf("Send broadcast pkg error\n");
             }
             
             peer_table_print(peer_tb);
             filetable_print(file_tb);
         }
-        pthread_mutex_unlock(peer_tb_mutex);
         pthread_mutex_unlock(file_tb_mutex);
+        pthread_mutex_unlock(peer_tb_mutex);
         
         sleep(HEARTBEAT_INTERVAL);
     }
@@ -70,9 +67,10 @@ void* monitor_alive(){
 
 void* listen_handshake(void* arg){
     int conn = *((int*)arg);
+    printf("LISTENING: %d \n",conn);
     ptt_seg_t pkt;
     ttp_seg_t sendpkg;
-    while(tracker_recvseg(conn, &pkt)){
+    while(tracker_recvseg(conn, &pkt)>0){
         switch (pkt.type) {
             case REGISTER:
                 // send back ack
@@ -88,7 +86,7 @@ void* listen_handshake(void* arg){
                 break;
                 
             case KEEP_ALIVE:
-                printf("received keep alive pkg\n");
+                printf("received keep alive pkg in socket: %d\n",conn);
                 pthread_mutex_lock(peer_tb_mutex);
                 peer_table_update_timestamp(peer_tb, conn);
                 pthread_mutex_unlock(peer_tb_mutex);
@@ -111,8 +109,8 @@ void* listen_handshake(void* arg){
                         }
                     }
                 }
-                pthread_mutex_unlock(peer_tb_mutex);
                 pthread_mutex_unlock(file_tb_mutex);
+                pthread_mutex_unlock(peer_tb_mutex);
                 break;
                 
             default:
@@ -120,6 +118,7 @@ void* listen_handshake(void* arg){
         }
     }
     
+    printf("Listening thread exit");
     free(arg);
     close(conn);
     pthread_exit(NULL);
@@ -134,6 +133,9 @@ int broadcast_filetable(ttp_seg_t* sendpkg){
     int i=0;
     for(i=0;i<fnum;i++){
         memcpy(sendpkg->file_table+i,sendfnode,sizeof(Node));
+        printf("name: %s\n",sendfnode->name);
+        printf("timestamp: %lu\n",sendfnode->timestamp);
+        printf("IP: %u\n",sendfnode->peerip);
         sendfnode=sendfnode->pNext;
     }
 
@@ -226,7 +228,7 @@ void tracker_stop(){
 int start_tracker() {
     printf("Start tracker...\n");
     
-    lis_hdshake_conn = socket(AF_INET, SOCK_STREAM, 0);
+    lis_hdshake_conn = socket(AF_INET, SOCK_STREAM, 6);
     if(lis_hdshake_conn < 0){
         perror("ERROR opening");
         return -1;
@@ -279,6 +281,10 @@ int start_tracker() {
         pthread_mutex_lock(peer_tb_mutex);
         peer_table_add(peer_tb, &clt_addr.sin_addr, peer_conn);
         pthread_mutex_unlock(peer_tb_mutex);
+
+	pthread_mutex_lock(peer_tb_mutex);
+	peer_table_print(peer_tb);
+	pthread_mutex_unlock(peer_tb_mutex);
         
         int *conn = (int*) malloc(sizeof(int));
         *conn = peer_conn;

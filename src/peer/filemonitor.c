@@ -1,11 +1,11 @@
-	#include "filemonitor.h"
+#include "filemonitor.h"
 
-
+char DIR_PATH[128];
 
 int watchDirectory(peer_file_table* ptable,char* directory){
 
 	struct inotify_event *event;
-
+	memcpy(DIR_PATH,directory,strlen(directory));
 	ssize_t numRead;
 	char* ept;
 	int fd=inotify_init ();
@@ -60,8 +60,8 @@ int watchDirectory(peer_file_table* ptable,char* directory){
 }
 //read configuration file and find the dir to be monitored;
 int readConfigFile(char* filename){
-	char lineBuf[100];
-	char *word1, *word2;
+    char lineBuf[100];
+    char *word1, *word2;
     FILE *fp;
     if ((fp = fopen("./config.dat", "r")) == NULL) {
         printf("Fail to open configuration file\n");
@@ -80,6 +80,7 @@ int readConfigFile(char* filename){
 int fileAdded(peer_file_table* ptable,char* filename){
 	printf("In fileAdded function\n");
 	FileInfo* finfo=getFileInfo(filename);
+	printf("File size: %u",finfo->size);
 	filetable_addnode(ptable, finfo->size, filename, finfo->lastModifyTime);
 	free(finfo);
 	filetable_print(ptable);
@@ -110,9 +111,12 @@ int getAllFilesInfo(){
 
 }
 FileInfo* getFileInfo(char* filename){
+	char path[100];
+	sprintf(path,"%s/%s",DIR_PATH,filename);
+	sleep(1);
 	FileInfo* file=(FileInfo*)malloc(sizeof(FileInfo));
 	struct stat attrib;
-	stat(filename, &attrib);
+	stat(path, &attrib);
 	file->size=attrib.st_size;
 	file->lastModifyTime=attrib.st_mtime;
 	return file;
