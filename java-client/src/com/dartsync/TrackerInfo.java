@@ -10,13 +10,15 @@ import java.net.Socket;
  *
  */
 public class TrackerInfo {
-
+	
+	public String trackerAddress = null;
 	public Socket socket = null;
 	public int heartBeatInterval = -1;
 	public int pieceLength = 0;
 	
-	public TrackerInfo(Socket socket, int heartBeatInterval, int pieceLength) {
+	public TrackerInfo(String trackerAddress, Socket socket, int heartBeatInterval, int pieceLength) {
 		super();
+		this.trackerAddress = trackerAddress;
 		this.socket = socket;
 		this.heartBeatInterval = heartBeatInterval;
 		this.pieceLength = pieceLength;

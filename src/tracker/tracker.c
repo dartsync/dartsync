@@ -6,6 +6,7 @@
 
 #include "sys/time.h"
 #include "tracker.h"
+#include "../network/network_utils.h"
 
 #define MAX_LISTEN_PEER 10
 
@@ -65,6 +66,63 @@ void* monitor_alive(){
     pthread_exit(NULL);
 }
 
+int parser_ptt_seg(char *buffer, char *delimiter,ptt_seg_t *seg){
+	char *token;
+	/**
+	 * 1. type
+	 * 2. protocol len
+	 * 3. ip
+	 * 4. file table size
+	 */
+	token = strtok(buffer,delimiter) ;
+	printf("%s\n",token);
+	if(token == NULL) return FALSE;
+	seg->type = atoi(token);
+	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
+	printf("%s\n",token);
+	seg->protocol_len = atoi(token);
+	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
+	printf("%s\n",token);
+	seg->peer_ip = atoi(token);
+	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
+	printf("%s\n",token);
+	seg->file_table_size = atoi(token);
+	return TRUE;
+}
+
+void *listen_handshake_platform(void* arg){
+    int conn = *((int*)arg);
+    printf("LISTENING: DIFF PLATFORM :- %d \n",conn);
+    char buffer[256];
+    ptt_seg_t pkt;
+    //bzero(&pkt,sizeof(ptt_seg_t));
+    while(recv(conn,buffer,256,0)>0){
+    	printf("%s",buffer);
+    	parser_ptt_seg(buffer,",",&pkt);
+    	switch(pkt.type){
+    		case REGISTER:{
+                printf("received register packet DIFF type = %d, protocol len = %d, file table size = %d, peer_ip = %d \n",pkt.type, pkt.protocol_len,pkt.file_table_size,pkt.peer_ip);
+                bzero(buffer,256);
+                sprintf(buffer,"%d,%d,%d%s",HEARTBEAT_INTERVAL,PIECE_LENGTH,0,"\n");
+                printf("sending :- %s",buffer);
+                //send(conn,"hello\n",7,0);
+                if (send(conn,buffer,256,0) < 0) {
+                	printf("Tracker send seg error\n");
+                }
+    		}
+    		break;
+    		case KEEP_ALIVE:{
+    			printf("received keep alive packet DIFF in socket: %d\n",conn);
+				pthread_mutex_lock(peer_tb_mutex);
+				peer_table_update_timestamp(peer_tb, conn);
+				pthread_mutex_unlock(peer_tb_mutex);
+			}
+			break;
+    	}
+    }
+    fflush(stdout);
+	return NULL;
+}
 void* listen_handshake(void* arg){
     int conn = *((int*)arg);
     printf("LISTENING: %d \n",conn);
@@ -225,6 +283,39 @@ void tracker_stop(){
     exit(0);
 }
 
+
+
+void *differnt_platform_handler(){
+	fflush(stdout);
+	printf("different_platform_handler called \n");
+	int serverSockFD = get_server_socket_fd(TRACKER_PORT_DIFFERENT,MAX_PEERS_NUM);
+	if(serverSockFD > 0){
+		printf("different platform handler started ... conn id = %d\n",serverSockFD);
+		while (TRUE) {
+			struct sockaddr_in clt_addr;
+			int cltlen = sizeof(clt_addr);
+			printf("listening for diff paltforms\n");
+			int peer_conn = accept(serverSockFD,(struct sockaddr*) &clt_addr, (socklen_t *) &cltlen);
+			printf("Received new client in diff platform handler");
+			if (peer_conn < 0) {
+				perror("ERROR accepting client from different platform");
+				continue;
+			}
+			pthread_mutex_lock(peer_tb_mutex);
+			peer_table_add(peer_tb, &clt_addr.sin_addr, peer_conn);
+			pthread_mutex_unlock(peer_tb_mutex);
+			pthread_mutex_lock(peer_tb_mutex);
+			peer_table_print(peer_tb);
+			pthread_mutex_unlock(peer_tb_mutex);
+			int *conn = (int*) malloc(sizeof(int));
+			*conn = peer_conn;
+			pthread_t handshake_thread;
+			pthread_create(&handshake_thread, NULL, listen_handshake_platform, conn);
+		}
+	}
+	return NULL;
+}
+
 int start_tracker() {
     printf("Start tracker...\n");
     
@@ -269,6 +360,9 @@ int start_tracker() {
     pthread_t monitor_thread;
     pthread_create(&monitor_thread, NULL, monitor_alive, NULL);
     
+    pthread_t diff_platform_thread;
+    pthread_create(&diff_platform_thread, NULL, differnt_platform_handler, NULL);
+
     while(1){
         struct sockaddr_in clt_addr;
         int cltlen = sizeof(clt_addr);

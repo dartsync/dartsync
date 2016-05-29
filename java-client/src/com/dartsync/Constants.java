@@ -20,7 +20,7 @@ public final class Constants {
 	public static final int SIGNAL_REGISTER = 0; 
 	public static final int SIGNAL_FILE_UPDATE = 2; 
 
-	public static final int PORT_TRACKER = 4877;
+	public static final int PORT_TRACKER = 4880;
 	
 	public static final int TIMEOUT = 5000;
 	

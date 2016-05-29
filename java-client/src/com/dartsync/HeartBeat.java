@@ -4,6 +4,7 @@
 package com.dartsync;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.Socket;
 
 /**
@@ -36,7 +37,10 @@ public class HeartBeat extends Thread {
 	}
 
 	private void sendHeartBeat() throws IOException {
-		trackerSocket.sendUrgentData(Constants.SIGNAL_HEART_BEAT);
+		SegmentPeer segment = new SegmentPeer();
+		segment.type = Constants.SIGNAL_HEART_BEAT;
+		PrintWriter pw = new PrintWriter(trackerSocket.getOutputStream(),true);
+		pw.println(segment.getTCPString());
 		System.out.println("heartbeat sent");
 	}
 	

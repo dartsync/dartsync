@@ -30,8 +30,8 @@ peer/client: peer_runner.c peer/peer.o peer/filemonitor.o peer/peer_peertable.o 
 tracker/tracker.o: tracker/tracker.c
 	gcc -Wall -pedantic -std=c99 -g -c tracker/tracker.c -o tracker/tracker.o
 
-tracker/server: tracker_runner.c tracker/tracker.o tracker/peertable.o utils/filetable.o utils/seg.o
-	gcc -Wall -pedantic -std=c99 -g -pthread tracker_runner.c tracker/tracker.o tracker/peertable.o utils/filetable.o utils/seg.o -o tracker/server
+tracker/server: tracker_runner.c tracker/tracker.o tracker/peertable.o utils/filetable.o utils/seg.o network/network_utils.o
+	gcc -Wall -pedantic -std=c99 -g -pthread tracker_runner.c tracker/tracker.o tracker/peertable.o utils/filetable.o utils/seg.o network/network_utils.o -o tracker/server
 
 clean:
 	rm -rf utils/*.o

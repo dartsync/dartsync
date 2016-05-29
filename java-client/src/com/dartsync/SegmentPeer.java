@@ -23,6 +23,19 @@ public class SegmentPeer {
 	// file table of the client -- your own design
 	public Node[] fileTable = new Node[Constants.MAX_FILE_NUM]; // 
 	
+	public String getTCPString(){
+		/**
+		 * 1. type
+		 * 2. protocol len
+		 * 3. ip
+		 * 4. file table size
+		 */
+		return type+","+
+		 	   protocolLength+","+
+		 	   peer_ip+","+
+		 	   file_table_size;
+	}
+	
 	public byte[] getBytes(){
 		
 		ByteBuffer buffer = ByteBuffer.allocate(MAX_BUFFER_SIZE);

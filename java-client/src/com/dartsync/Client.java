@@ -3,10 +3,14 @@
  */
 package com.dartsync;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -19,7 +23,7 @@ import com.dartsync.FileMonitor.FileMonitorListener;
  */
 public class Client implements FileMonitorListener{
 	
-	public static final String TRACKER_ADDRESS = "tahoe.cs.dartmouth.edu";
+	public static final String TRACKER_ADDRESS = "localhost";
 	
 	private Thread heartBeatThread = null;
 	private Thread fileMonitor = null;
@@ -27,13 +31,13 @@ public class Client implements FileMonitorListener{
 	private Thread trackerThread = null;
 	
 	private Boolean isClientRunning = false;
-	private String trackerAddress;
+	private TrackerInfo trackerInfo;
 	private File rootDir ;
 	
-	public Client(String trackerAddress, File rootDir){
+	public Client(TrackerInfo info, File rootDir){
 		isClientRunning = new Boolean(true);
-		this.trackerAddress = trackerAddress;
 		this.rootDir = rootDir;
+		this.trackerInfo = info;
 	}
 	
 	public void stopClient(){
@@ -75,20 +79,25 @@ public class Client implements FileMonitorListener{
 		}else{
 			rootDir = FileMonitor.getDefaultRootDir(); 
 		}
-		final Client client = new Client(trackerAddress, rootDir);
-		Runtime.getRuntime().addShutdownHook(new Thread()
-        {
-            @Override
-            public void run()
-            {
-            	System.out.println("shutdown called");
-                if(client!=null){
-                	client.stopClient();
-                }
-            }
-        });
-		System.out.println("starting client");
-		client.startClient();
+		TrackerInfo info = connectToTracker(trackerAddress);
+		if(info != null){
+			final Client client = new Client(info, rootDir);
+			Runtime.getRuntime().addShutdownHook(new Thread()
+	        {
+	            @Override
+	            public void run()
+	            {
+	            	System.out.println("shutdown called");
+	                if(client!=null){
+	                	client.stopClient();
+	                }
+	            }
+	        });
+			System.out.println("starting client");
+			client.startClient();
+		}else{
+			System.out.println("Tracker not available ");
+		}
 	}
 	
 	public static TrackerInfo connectToTracker(String trackerAddress){
@@ -97,27 +106,29 @@ public class Client implements FileMonitorListener{
 			Socket socket = new Socket(trackerAddress, Constants.PORT_TRACKER);
 			socket.setKeepAlive(true);
 			socket.setSoTimeout(Constants.TIMEOUT);
-			OutputStream os = socket.getOutputStream();
-			InputStream is = socket.getInputStream();
+			PrintWriter pw = new PrintWriter(socket.getOutputStream(),true);
+			BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			SegmentPeer segment = new SegmentPeer();
 			segment.peer_ip = ByteBuffer.wrap(InetAddress.getLocalHost().getAddress()).getInt();
 			segment.protocolLength = 126;
 			segment.type = Constants.SIGNAL_REGISTER;
 			segment.file_table_size = 0;
-			byte[] segment_buf = segment.getBytes();
-			os.write(segment_buf);
-			System.out.println("Written " + segment_buf.length + "bytes -> " + new String(segment_buf));
-			byte[] recv_seg = new byte[1024];
-			is.read(recv_seg);
-			ByteBuffer inputBuffer = ByteBuffer.wrap(recv_seg);
+			String sendMsg = segment.getTCPString();
+			pw.println(sendMsg);
+			String recvMessage = br.readLine();
+			String[] chunks = recvMessage.split(",");
+			System.out.println(recvMessage);
 			SegmentTracker segTracker = new SegmentTracker();
-			segTracker.interval = inputBuffer.getInt();
+			if(chunks.length >= 1)
+					segTracker.interval = Integer.parseInt(chunks[0]);
+			if(chunks.length >= 2)
+				segTracker.pieceLength = Integer.parseInt(chunks[1]);
+			if(chunks.length >= 3)
+				segTracker.pieceLength = Integer.parseInt(chunks[2]);
 			System.out.println("Interval = " + segTracker.interval);
-			segTracker.pieceLength = inputBuffer.getInt();
 			System.out.println("PieceLength = " + segTracker.pieceLength);
-			segTracker.file_table_size = inputBuffer.getInt();
 			System.out.println("table size = " + segTracker.file_table_size);
-			info = new TrackerInfo(socket, segTracker.interval, segTracker.pieceLength);
+			info = new TrackerInfo(trackerAddress,socket, segTracker.interval, segTracker.pieceLength);
 		}catch(IOException ex){
 			System.out.println("IO Eception :- " + ex.getMessage());
 			ex.printStackTrace();
@@ -128,6 +139,8 @@ public class Client implements FileMonitorListener{
 	public void startClient(){
 		fileMonitor = new FileMonitor(rootDir, null, this);
 		fileMonitor.start();
+		heartBeatThread = new HeartBeat(trackerInfo.socket);
+		heartBeatThread.start();
 		try {
 			if(heartBeatThread != null && heartBeatThread.isAlive()) heartBeatThread.join();
 			if(fileMonitor != null && fileMonitor.isAlive()) fileMonitor.join();
