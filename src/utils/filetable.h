@@ -53,4 +53,5 @@ int filetable_delnode(peer_file_table* ptable, int size, char* name, unsigned lo
 void filetable_destroy(peer_file_table* table);
 void filetable_print(peer_file_table* ptable);
 int file_table_deleteip(peer_file_table* ptable, unsigned int ip);
+int file_table_addip(peer_file_table* ptable,char* name, unsigned int ip);
 unsigned long getmyip();

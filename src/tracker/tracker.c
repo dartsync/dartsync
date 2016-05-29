@@ -166,6 +166,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
         }
         int i;
         for(i=0;i<num;i++){
+	    printf("add node name: %s \n",head->name);
             filetable_addnode(file_tb, head->size, head->name, head->timestamp);
             head++;
         }

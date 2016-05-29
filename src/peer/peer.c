@@ -103,12 +103,12 @@ int peer_update_filetable(Node* recv,int recvnum){
 	int num=0;
 	Node* recvfpt=recv;
 	Node* curfpt=filetable->file	;
-	printf("in peer_update_filetable:");
+	printf("in peer_update_filetable:\n");
 	
 	Node* tmp=recv;
 	int n;
 	for(n=0;n<recvnum;n++){
-		printf("name: %s",tmp->name);
+		printf("name: %s\n",tmp->name);
 		tmp++;
 	}
 
@@ -117,11 +117,15 @@ int peer_update_filetable(Node* recv,int recvnum){
 	while(num<recvnum&&curfpt!=NULL){
 		Node* recvnode=recv+num;
 		if(strcmp(recvnode->name,curfpt->name)<0){
-			//pthread_t peer_download_thread;
-			//pthread_create(&peer_download_thread,NULL,peerdownload,(void*)recvfpt->name);
 			printf("Find new file: %s\n",recvnode->name);
-//			download_file(recvfpt);
+			int i;
+			printf("IPnum: %s\n",recvnode->name);
 			download_file(recvnode);
+			sleep(1);
+			for(i=0;i<recvnode->peernum;i++){
+				printf("Target file IP : %u\n",recvnode->peerip+i);
+				file_table_addip(filetable,recvnode->name,recvnode->peerip[i]);
+			}
 			num++;
 		}
 		else if(strcmp(recvnode->name,curfpt->name)>0){
@@ -137,6 +141,9 @@ int peer_update_filetable(Node* recv,int recvnum){
 				num++;
 				curfpt=curfpt->pNext;
 			}
+			else if(recvnode->peernum){
+				
+			}
 			else{
 				num++;
 				curfpt=curfpt->pNext;
@@ -144,6 +151,19 @@ int peer_update_filetable(Node* recv,int recvnum){
 		}
 	}
 
+	while(num<recvnum){
+		Node* recvnode=recv+num;
+		printf("Find new file: %s\n",recvnode->name);
+		printf("Target file IP : %u\n",recvnode->peerip[0]);
+		download_file(recvnode);
+		num++;
+	}
+	while(curfpt!=NULL){
+		printf("Delete file: %s\n",curfpt->name);
+		remove(curfpt->name);
+		fileDeleted(filetable, curfpt->name);
+		curfpt=curfpt->pNext;
+	}
 }
 
 
