@@ -4,6 +4,12 @@
 package com.dartsync;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.nio.ByteBuffer;
 
 import com.dartsync.FileMonitor.FileMonitorListener;
 
@@ -83,6 +89,40 @@ public class Client implements FileMonitorListener{
         });
 		System.out.println("starting client");
 		client.startClient();
+	}
+	
+	public static TrackerInfo connectToTracker(String trackerAddress){
+		TrackerInfo info = null;
+		try{
+			Socket socket = new Socket(trackerAddress, Constants.PORT_TRACKER);
+			socket.setKeepAlive(true);
+			socket.setSoTimeout(Constants.TIMEOUT);
+			OutputStream os = socket.getOutputStream();
+			InputStream is = socket.getInputStream();
+			SegmentPeer segment = new SegmentPeer();
+			segment.peer_ip = ByteBuffer.wrap(InetAddress.getLocalHost().getAddress()).getInt();
+			segment.protocolLength = 126;
+			segment.type = Constants.SIGNAL_REGISTER;
+			segment.file_table_size = 0;
+			byte[] segment_buf = segment.getBytes();
+			os.write(segment_buf);
+			System.out.println("Written " + segment_buf.length + "bytes -> " + new String(segment_buf));
+			byte[] recv_seg = new byte[1024];
+			is.read(recv_seg);
+			ByteBuffer inputBuffer = ByteBuffer.wrap(recv_seg);
+			SegmentTracker segTracker = new SegmentTracker();
+			segTracker.interval = inputBuffer.getInt();
+			System.out.println("Interval = " + segTracker.interval);
+			segTracker.pieceLength = inputBuffer.getInt();
+			System.out.println("PieceLength = " + segTracker.pieceLength);
+			segTracker.file_table_size = inputBuffer.getInt();
+			System.out.println("table size = " + segTracker.file_table_size);
+			info = new TrackerInfo(socket, segTracker.interval, segTracker.pieceLength);
+		}catch(IOException ex){
+			System.out.println("IO Eception :- " + ex.getMessage());
+			ex.printStackTrace();
+		}
+		return info;
 	}
 	
 	public void startClient(){
