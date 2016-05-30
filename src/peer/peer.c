@@ -84,9 +84,13 @@ int send_filetable(){
 	sendseg->type=FILE_UPDATE;
 	sendseg->peer_ip=getmyip();
 //	sendseg->port=;
-	sendseg->file_table_size=filetable->filenum;
-	int fnum=filetable->filenum;
-	Node* sendfnode=filetable->file;
+	
+	peer_file_table *sendftable;
+	sendftable=filetable_init(dirname);
+
+	sendseg->file_table_size=sendftable->filenum;
+	int fnum=sendftable->filenum;
+	Node* sendfnode=sendftable->file;
 	printf("Sending filetable: filenum: %d\n",fnum);
 	int i=0;
 	for(i=0;i<fnum;i++){
@@ -95,45 +99,55 @@ int send_filetable(){
 	}
 	int retnum;
 	retnum=peer_sendseg(network_conn, sendseg);
+	filetable_destroy(sendftable);
 	return retnum;
 }
 
 int peer_update_filetable(Node* recv,int recvnum){
-	int curnum=filetable->filenum;
+
+	peer_file_table *curftable;
+	curftable=filetable_init(dirname);
+
+	int curnum=curftable->filenum;
 	int num=0;
 	Node* recvfpt=recv;
-	Node* curfpt=filetable->file	;
-	printf("in peer_update_filetable:");
-	
+	Node* curfpt=curftable->file	;
+	printf("in peer_update_filetable: block update\n");
+	//blockUpdate();
 	Node* tmp=recv;
 	int n;
 	for(n=0;n<recvnum;n++){
-		printf("name: %s",tmp->name);
+		printf("name: %s\n",tmp->name);
 		tmp++;
 	}
-
 	int i=0;
 	// file mutex
 	while(num<recvnum&&curfpt!=NULL){
 		Node* recvnode=recv+num;
 		if(strcmp(recvnode->name,curfpt->name)<0){
-			//pthread_t peer_download_thread;
-			//pthread_create(&peer_download_thread,NULL,peerdownload,(void*)recvfpt->name);
 			printf("Find new file: %s\n",recvnode->name);
-//			download_file(recvfpt);
+			int i;
+			printf("IPnum: %s\n",recvnode->name);
 			download_file(recvnode);
 			num++;
 		}
 		else if(strcmp(recvnode->name,curfpt->name)>0){
+			char delFilename[128];
 			printf("Delete file: %s\n",curfpt->name);
-			remove(curfpt->name);
-			fileDeleted(filetable, curfpt->name);
+			sprintf(delFilename,"%s/%s",dirname,curfpt->name);
+			remove(delFilename);
+			//fileDeleted(filetable, curfpt->name);
 			curfpt=curfpt->pNext;
 		}
 		else{
 			if(recvnode->size!=curfpt->size||recvnode->timestamp!=curfpt->timestamp){
 				// tracker and peer both have this file, but peer side file need to be updated
+				printf("Find motified : %s\n",recvnode->name);
 //				download_file(recvfpt);
+				num++;
+				curfpt=curfpt->pNext;
+			}
+			else if(recvnode->peernum){
 				num++;
 				curfpt=curfpt->pNext;
 			}
@@ -142,8 +156,27 @@ int peer_update_filetable(Node* recv,int recvnum){
 				curfpt=curfpt->pNext;
 			}
 		}
-	}
 
+	}
+	printf("here\n");
+	while(num<recvnum){
+		Node* recvnode=recv+num;
+		printf("Find new file: %s\n",recvnode->name);
+		printf("Target file IP : %u\n",recvnode->peerip[0]);
+		download_file(recvnode);
+		num++;
+	}
+	while(curfpt!=NULL){
+		char delFilename[128];
+		printf("Delete file: %s\n",curfpt->name);
+		sprintf(delFilename,"%s/%s",dirname,curfpt->name);
+		remove(delFilename);
+		//fileDeleted(filetable, curfpt->name);
+		curfpt=curfpt->pNext;
+	}
+	printf("unblock update\n");
+	//unblockUpdate();
+	filetable_destroy(curftable);
 }
 
 
@@ -250,6 +283,7 @@ void merge_temp_file(FILE *main_file, FILE *temp_file){
 	printf("merging temp file finished\n");
 }
 void *file_download_handler(void *file_info){
+	blockUpdate();
 	char filename[256];
 	Node* file_node = (Node *) file_info;
 	sprintf(filename,"%s/%s",dirname,file_node->name);
@@ -285,8 +319,11 @@ void *file_download_handler(void *file_info){
 				fclose(main_file);
 			}
 			printf("merge file success \n");
+			
 		}
 	}
+	unblockUpdate();
+	send_filetable();
 	pthread_exit(NULL);
 	return NULL ;
 }
@@ -309,7 +346,8 @@ void* filemonitor(void* arg){
 void* heartbeat(){
 	printf("Now in heartbeat function\n");
 	while(1){
-		sleep(HEARTBEAT_INTERVAL);
+		//sleep(HEARTBEAT_INTERVAL);
+		select(0,0,0,0,&(struct timeval){.tv_usec = heartbeat_interval * 1000000 * 0.9});		
 		ptt_seg_t* sendseg=(ptt_seg_t*)malloc(sizeof(ptt_seg_t)); 
 //		sendseg->protocol_len=;
 //		sendseg->protocol_name=;

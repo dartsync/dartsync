@@ -52,8 +52,10 @@ int filetable_addnode(peer_file_table* ptable, int size, char* name, unsigned lo
 
 	if(tmp==NULL){
 		Node* fnode=(Node*)malloc(sizeof(Node));
+		memset(fnode,0,sizeof(Node));
 		fnode->size=size;
 		memcpy(fnode->name,name,strlen(name));
+		//printf("Init node name: %s",fnode->name);
 		fnode->timestamp=timestamp;
 		fnode->pNext=NULL;
 		fnode->peernum=1;
@@ -62,6 +64,7 @@ int filetable_addnode(peer_file_table* ptable, int size, char* name, unsigned lo
 	}
 	else{
 		Node* tmpnode=(Node*)malloc(sizeof(Node));
+		memset(tmpnode,0,sizeof(Node));
 		tmpnode->pNext=tmp;
 		Node* del=tmpnode;
 
@@ -71,6 +74,7 @@ int filetable_addnode(peer_file_table* ptable, int size, char* name, unsigned lo
 		}
 
 		Node* newnode=(Node*)malloc(sizeof(Node));
+		memset(newnode,0,sizeof(Node));
 		newnode->size=size;
 		memcpy(newnode->name,name,strlen(name));
 		newnode->timestamp=timestamp;
@@ -143,6 +147,30 @@ int file_table_deleteip(peer_file_table* ptable, unsigned int ip){
 	return 1;
 }
 
+int file_table_addip(peer_file_table* ptable,char* name, unsigned int ip){
+	Node* tmp=ptable->file;
+	if(tmp==NULL){
+		printf("Add ip error \n");
+		return -1;
+	}
+	while(tmp!=NULL){
+		if(strcmp(tmp->name,name)!=0){
+			continue;
+		}
+		int i;
+		for(i=0;i<tmp->peernum;i++){
+			if(tmp->peerip[i]==ip){
+				printf("file_table_addip: ip already exist\n");
+				return -1;
+			}
+		}
+		tmp->peerip[tmp->peernum]=ip;
+		return 1;
+	}
+	printf("Not find requested file \n");
+	return -1;
+}
+
 int filetable_delnode(peer_file_table* ptable, int size, char* name, unsigned long int timestamp){
 	Node* tmp=ptable->file;
 	if(tmp==NULL){
@@ -160,6 +188,7 @@ int filetable_delnode(peer_file_table* ptable, int size, char* name, unsigned lo
 	}
 	else if(strcmp(tmp->name,name)==0){
 		ptable->file=tmp->pNext;
+		ptable->filenum--;
 		free(tmp);
 	}
 	else{
@@ -189,7 +218,7 @@ void filetable_destroy(peer_file_table* table){
 }
 
 void filetable_print(peer_file_table* ptable){
-	printf("In filetable_print function\n");
+	printf("\n----------------In filetable_print function---------------------\n");
 	printf("Dir file number: %d\n",ptable->filenum);
 	Node* tmp=ptable->file;
 	while(tmp!=NULL){
