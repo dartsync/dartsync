@@ -6,6 +6,7 @@
 
 #include "sys/time.h"
 #include "tracker.h"
+#include "../network/network_utils.h"
 
 #define MAX_LISTEN_PEER 10
 
@@ -19,28 +20,27 @@ pthread_mutex_t *file_tb_mutex;
 void* monitor_alive(){
     char ip_addr[IP_LEN];
     ttp_seg_t sendpkg;
-
+    
     while(lis_hdshake_conn > 0){
-        struct timeval currentTime;
-        gettimeofday(&currentTime, NULL);
-        unsigned long int time = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
         
         int change = 0;
         
         pthread_mutex_lock(peer_tb_mutex);
         pthread_mutex_lock(file_tb_mutex);
         
+        struct timeval currentTime;
+        gettimeofday(&currentTime, NULL);
+        unsigned long int time = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
+        
         tracker_peer_t *p = peer_tb->head;
-
-//        peer_table_print(peer_tb);
-
+        
         while(p != NULL){
             // memset(ip_addr, 0, sizeof(char) * IP_LEN);
-	    printf("time: time %lu last time: %lu \n",time,p->last_time_stamp);
+            //printf("time: time %lu last time: %lu \n", time, p->last_time_stamp);
+            //printf("time interval: %lu\n", time - p->last_time_stamp);
             if(time - p->last_time_stamp >= HEARTBEAT_INTERVAL * 1000000){
                 printf("Peer time out\n");
-                memset(ip_addr, 0, IP_LEN);
-                strncpy(ip_addr, p->ip, IP_LEN);
+                unsigned int ip_addr = p->ip;
                 close(p->sockfd);
                 peer_table_delete(peer_tb, ip_addr);
                 file_table_deleteip(file_tb, ip_addr);
@@ -65,11 +65,69 @@ void* monitor_alive(){
     pthread_exit(NULL);
 }
 
+int parser_ptt_seg(char *buffer, char *delimiter,ptt_seg_t *seg){
+	char *token;
+	/**
+	 * 1. type
+	 * 2. protocol len
+	 * 3. ip
+	 * 4. file table size
+	 */
+	token = strtok(buffer,delimiter) ;
+	printf("%s\n",token);
+	if(token == NULL) return FALSE;
+	seg->type = atoi(token);
+	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
+	printf("%s\n",token);
+	seg->protocol_len = atoi(token);
+	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
+	printf("%s\n",token);
+	seg->peer_ip = atoi(token);
+	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
+	printf("%s\n",token);
+	seg->file_table_size = atoi(token);
+	return TRUE;
+}
+
+void *listen_handshake_platform(void* arg){
+    int conn = *((int*)arg);
+    printf("LISTENING: DIFF PLATFORM :- %d \n",conn);
+    char buffer[256];
+    ptt_seg_t pkt;
+    //bzero(&pkt,sizeof(ptt_seg_t));
+    while(recv(conn,buffer,256,0)>0){
+    	printf("%s",buffer);
+    	parser_ptt_seg(buffer,",",&pkt);
+    	switch(pkt.type){
+    		case REGISTER:{
+                printf("received register packet DIFF type = %d, protocol len = %d, file table size = %d, peer_ip = %d \n",pkt.type, pkt.protocol_len,pkt.file_table_size,pkt.peer_ip);
+                bzero(buffer,256);
+                sprintf(buffer,"%d,%d,%d%s",HEARTBEAT_INTERVAL,PIECE_LENGTH,0,"\n");
+                printf("sending :- %s",buffer);
+                //send(conn,"hello\n",7,0);
+                if (send(conn,buffer,256,0) < 0) {
+                	printf("Tracker send seg error\n");
+                }
+    		}
+    		break;
+    		case KEEP_ALIVE:{
+    			printf("received keep alive packet DIFF in socket: %d\n",conn);
+				pthread_mutex_lock(peer_tb_mutex);
+				peer_table_update_timestamp(peer_tb, conn);
+				pthread_mutex_unlock(peer_tb_mutex);
+			}
+			break;
+    	}
+    }
+    fflush(stdout);
+	return NULL;
+}
 void* listen_handshake(void* arg){
     int conn = *((int*)arg);
     printf("LISTENING: %d \n",conn);
     ptt_seg_t pkt;
     ttp_seg_t sendpkg;
+    struct in_addr ip_addr;
     while(tracker_recvseg(conn, &pkt)>0){
         switch (pkt.type) {
             case REGISTER:
@@ -79,14 +137,20 @@ void* listen_handshake(void* arg){
                 sendpkg.interval = HEARTBEAT_INTERVAL;
                 sendpkg.piece_len = PIECE_LENGTH;
                 sendpkg.file_table_size = 0;
-
+                
+                pthread_mutex_lock(peer_tb_mutex);
+                peer_table_add(peer_tb, pkt.peer_ip, conn);
+                peer_table_print(peer_tb);
+                pthread_mutex_unlock(peer_tb_mutex);
+                
                 if(tracker_sendseg(conn,&sendpkg)<0){
                     printf("Tracker send seg error\n");
                 }
                 break;
                 
             case KEEP_ALIVE:
-                printf("received keep alive pkg in socket: %d\n",conn);
+                ip_addr.s_addr = pkt.peer_ip;
+                //printf("received keep alive pkg in socket %d from %s\n",conn, inet_ntoa(ip_addr));
                 pthread_mutex_lock(peer_tb_mutex);
                 peer_table_update_timestamp(peer_tb, conn);
                 pthread_mutex_unlock(peer_tb_mutex);
@@ -103,7 +167,7 @@ void* listen_handshake(void* arg){
                         memset(&sendpkg, 0, sizeof(ttp_seg_t));
                         sendpkg.interval = HEARTBEAT_INTERVAL;
                         sendpkg.piece_len = PIECE_LENGTH;
-
+                        
                         if(broadcast_filetable(&sendpkg)<0){
                             printf("Send broadcast pkg error\n");
                         }
@@ -125,7 +189,7 @@ void* listen_handshake(void* arg){
 }
 
 int broadcast_filetable(ttp_seg_t* sendpkg){
-
+    
     int fnum=file_tb->filenum;
     sendpkg->file_table_size=fnum;
     Node* sendfnode=file_tb->file;
@@ -138,7 +202,7 @@ int broadcast_filetable(ttp_seg_t* sendpkg){
         printf("IP: %u\n",sendfnode->peerip);
         sendfnode=sendfnode->pNext;
     }
-
+    
     tracker_peer_t *phead=peer_tb->head;
     while(phead!=NULL){
         if(tracker_sendseg(phead->sockfd,sendpkg)<0){
@@ -152,67 +216,115 @@ int broadcast_filetable(ttp_seg_t* sendpkg){
 
 int tracker_update_filetable(ptt_seg_t* recvseg){
     ptt_seg_t pkt;
-    int num=recvseg->file_table_size;
-    Node* head=recvseg->file_table;
-    Node* curftable=file_tb->file;
-    printf("Received filetable filenum: %d \n",num);
-
-    if(num!=file_tb->filenum){
-        peer_file_table* tmp=file_tb;
-        filetable_destroy(tmp);
-        file_tb=file_table_create();
-        if(num==0){
-            return 1;
-        }
-        int i;
-        for(i=0;i<num;i++){
-	    printf("add node name: %s \n",head->name);
-            filetable_addnode(file_tb, head->size, head->name, head->timestamp);
-            head++;
-        }
-        return 1;
-    }
-    else{
-        int i;
-        int change=0;
-        for(i=0;i<num;i++){
-            if(compareNode(head,curftable)<0){
-                change=1;
-                break;
+    int num = recvseg->file_table_size;
+    Node* head = recvseg->file_table;
+    Node* curftable = file_tb->file;
+    Node *prev = NULL;
+    printf("Received filetable, file num: %d \n",num);
+    int i;
+    int change = 0;
+    
+    for(i = 0; i < num; i++){
+        if(curftable != NULL && strcmp(head[i].name, curftable->name) == 0){
+	printf("compare node in list %s\n", head[i].name);
+            if(curftable->size == head[i].size && curftable->timestamp == head[i].timestamp){
+                int flag = 1;
+                for(int i = 0; i < curftable->peernum; i++){
+                    if(curftable->peerip[i] == recvseg->peer_ip){
+                        flag = 0;
+                        break;
+                    }
+                }
+                if(flag == 1 && curftable->peernum < MAX_PEER_NUM){
+                    curftable->peerip[curftable->peernum] = recvseg->peer_ip;
+                    curftable->peernum++;
+                    change = 1;
+                }
+            }else{
+                curftable->size = head[i].size;
+                curftable->timestamp = head[i].timestamp;
+                curftable->peerip[0] = recvseg->peer_ip;
+                curftable->peernum = 1;
+                change = 1;
             }
-            head++;
-            curftable=curftable->pNext;
-        }
-        if(change!=0){
-            peer_file_table* tmp=file_tb;
-            filetable_destroy(tmp);
-            file_tb=file_table_create();
-            if(num==0){
-                return 1;
+            prev = curftable;
+            curftable = curftable->pNext;
+        }else if(curftable != NULL && strcmp(head[i].name, curftable->name) < 0){
+		printf("add node in list %s\n", head[i].name);
+            Node *t = (Node*) malloc(sizeof(Node));
+            memset(t, 0, sizeof(Node));
+            t->size = head[i].size;
+            t->peernum = 1;
+            t->timestamp = head[i].timestamp;
+            memcpy(t->name, head[i].name, strlen(head[i].name));
+            t->peerip[0] = recvseg->peer_ip;
+            
+            if(prev == NULL){
+                t->pNext = curftable;
+                file_tb->file = t;
+                prev = file_tb->file;
+            }else{
+                t->pNext = curftable;
+                prev->pNext = t;
+                prev = t;
             }
-            int i;
-            for(i=0;i<num;i++){
-                filetable_addnode(file_tb, head->size, head->name, head->timestamp);
-                head++;
+            change = 1;
+            file_tb->filenum++;
+            
+        }else if(curftable != NULL && strcmp(head[i].name, curftable->name) > 0){
+		printf("delete node in list %s\n", head[i].name);
+            Node *t = curftable;
+            if(prev == NULL){
+                file_tb->file = file_tb->file->pNext;
+                curftable = curftable->pNext;
+                free(t);
+            }else{
+                prev->pNext = t->pNext;
+                curftable = curftable->pNext;
+                free(t);
             }
-            return 1;
+            change = 1;
+            file_tb->filenum--;
+	    i--;
+        }else{
+		printf("add node at last position %s\n", head[i].name);
+            Node *t = (Node*) malloc(sizeof(Node));
+            memset(t, 0, sizeof(Node));
+            t->size = head[i].size;
+            t->peernum = 1;
+            t->timestamp = head[i].timestamp;
+            memcpy(t->name, head[i].name, strlen(head[i].name));
+            t->peerip[0] = recvseg->peer_ip;
+            if(prev == NULL){
+                file_tb->file = t;
+                prev = file_tb->file;
+            }else{
+                prev->pNext = t;
+                prev = t;
+            }
+            change = 1;
+            file_tb->filenum++;
         }
-        else{
-            return 0;
-        }
     }
-
-
-}
-
-int compareNode(Node* a, Node* b){
-    if(a->size==b->size&&(a->timestamp==b->timestamp)&&(a->peernum==b->peernum)&&(strcmp(a->name,b->name)==0)){
-        return 1;
+    
+    while(curftable != NULL){
+printf("delete node last remain nodes %s\n",  curftable->name);
+	if(prev == NULL){
+		Node *t = curftable;
+		curftable = curftable->pNext;
+		file_tb->file = NULL;
+		free(t);
+	}else{
+		prev->pNext = NULL;
+        	Node *t = curftable;
+        	curftable = curftable->pNext;
+        	free(t);
+	}
+        change = 1;
+        file_tb->filenum--;
     }
-    else{
-        return -1;
-    }
-
+    
+    return change;
 }
 
 void tracker_stop(){
@@ -224,6 +336,39 @@ void tracker_stop(){
     filetable_destroy(file_tb);
     free(file_tb_mutex);
     exit(0);
+}
+
+
+
+void *differnt_platform_handler(){
+	fflush(stdout);
+	printf("different_platform_handler called \n");
+	int serverSockFD = get_server_socket_fd(TRACKER_PORT_DIFFERENT,MAX_PEERS_NUM);
+	if(serverSockFD > 0){
+		printf("different platform handler started ... conn id = %d\n",serverSockFD);
+		while (TRUE) {
+			struct sockaddr_in clt_addr;
+			int cltlen = sizeof(clt_addr);
+			printf("listening for diff paltforms\n");
+			int peer_conn = accept(serverSockFD,(struct sockaddr*) &clt_addr, (socklen_t *) &cltlen);
+			printf("Received new client in diff platform handler");
+			if (peer_conn < 0) {
+				perror("ERROR accepting client from different platform");
+				continue;
+			}
+			pthread_mutex_lock(peer_tb_mutex);
+			peer_table_add(peer_tb, &clt_addr.sin_addr, peer_conn);
+			pthread_mutex_unlock(peer_tb_mutex);
+			pthread_mutex_lock(peer_tb_mutex);
+			peer_table_print(peer_tb);
+			pthread_mutex_unlock(peer_tb_mutex);
+			int *conn = (int*) malloc(sizeof(int));
+			*conn = peer_conn;
+			pthread_t handshake_thread;
+			pthread_create(&handshake_thread, NULL, listen_handshake_platform, conn);
+		}
+	}
+	return NULL;
 }
 
 int start_tracker() {
@@ -241,20 +386,16 @@ int start_tracker() {
     svr_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     svr_addr.sin_port = htons(TRACKER_PORT);
     
-    printf("binding socket:\n");
-
     if(bind(lis_hdshake_conn, (struct sockaddr*) &svr_addr, sizeof(svr_addr)) < 0){
         perror("ERROR on binding");
         return -1;
-    }
-    printf("listening socket:\n");
-    
+    }    
     if(listen(lis_hdshake_conn, MAX_LISTEN_PEER) < 0){
         perror("ERROR listening\n");
         return -1;
     }
     
-    printf("Listening request from peer:");
+    printf("Listening request from peer:\n\n");
     // printf("%s\n", &svr_addr.sin_addr);
     
     signal(SIGINT, tracker_stop);
@@ -270,6 +411,9 @@ int start_tracker() {
     pthread_t monitor_thread;
     pthread_create(&monitor_thread, NULL, monitor_alive, NULL);
     
+    pthread_t diff_platform_thread;
+    pthread_create(&diff_platform_thread, NULL, differnt_platform_handler, NULL);
+
     while(1){
         struct sockaddr_in clt_addr;
         int cltlen = sizeof(clt_addr);
@@ -279,13 +423,10 @@ int start_tracker() {
             continue;
         }
         
-        pthread_mutex_lock(peer_tb_mutex);
-        peer_table_add(peer_tb, &clt_addr.sin_addr, peer_conn);
-        pthread_mutex_unlock(peer_tb_mutex);
-
-	pthread_mutex_lock(peer_tb_mutex);
-	peer_table_print(peer_tb);
-	pthread_mutex_unlock(peer_tb_mutex);
+//        pthread_mutex_lock(peer_tb_mutex);
+//        peer_table_add(peer_tb, &clt_addr.sin_addr, peer_conn);
+//        peer_table_print(peer_tb);
+//        pthread_mutex_unlock(peer_tb_mutex);
         
         int *conn = (int*) malloc(sizeof(int));
         *conn = peer_conn;

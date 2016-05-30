@@ -25,14 +25,14 @@ int protocol_len;
 char protocol_name[128];
 // packet type : register, keep alive, update file table
 int type;
-// reserved space, you could use this space for your convenient, 8 bytes by default
-char reserved[RESERVED_LEN];
 // the peer ip address sending this packet
 unsigned int peer_ip;
 // listening port number in p2p
 int port;
 // the number of files in the local file table -- optional
 int file_table_size;
+// reserved space, you could use this space for your convenient, 8 bytes by default
+char reserved[RESERVED_LEN];
 // file table of the client -- your own design
 Node file_table[MAX_FILE_NUM];
 }ptt_seg_t;

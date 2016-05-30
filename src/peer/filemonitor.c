@@ -1,9 +1,10 @@
 #include "filemonitor.h"
 
 char DIR_PATH[128];
+int block_updated;
 
 int watchDirectory(peer_file_table* ptable,char* directory){
-
+	block_updated=1;
 	struct inotify_event *event;
 	memcpy(DIR_PATH,directory,strlen(directory));
 	ssize_t numRead;
@@ -18,43 +19,51 @@ int watchDirectory(peer_file_table* ptable,char* directory){
 		printf("Error when add watch for inotify\n");
 	}
 	while(1){
+		int updated=0;
 		numRead=read(fd, buf, EVENT_BUF_LEN);
 		if(numRead<=0){
 			printf("Eror reading inotify event\n");
 		//	exit
 		}
-        for (ept=buf; ept<buf+numRead;) {
-            event = (struct inotify_event *) ept;
-//            displayInotifyEvent(event);
-            // get file name and inotify event type and related event handler
-            char* filename=event->name;
-            if(event->len){
-            	if(event->mask & IN_CREATE){
-            		printf("Inotify event:File %s creat\n",filename);
-            		fileAdded(ptable,filename);
-            	}
-            	else if(event->mask & IN_MODIFY){
+		for (ept=buf; ept<buf+numRead;) {
+		    event = (struct inotify_event *) ept;
+		    // get file name and inotify event type and related event handler
+		    char* filename=event->name;
+		    if(event->len){
+			if(block_updated){
+			    	if(event->mask & IN_CREATE){
+			    		printf("Inotify event:File %s creat\n",filename);
+			    		//fileAdded(ptable,filename);
+					updated=1;
+			    	}
+			    	else if(event->mask & IN_MODIFY){
 					printf("Inotify event:File %s modify\n",filename);
-					fileModified(ptable,filename);
-            	}
-            	else if(event->mask & IN_DELETE){
+					//fileModified(ptable,filename);
+					updated=1;
+			    	}
+			    	else if(event->mask & IN_DELETE){
 					printf("Inotify event:File %s delete\n",filename);
-					fileDeleted(ptable,filename);
-            	}
-            	else if(event->mask & IN_MOVED_FROM){
+					//fileDeleted(ptable,filename);
+					updated=1;
+			    	}
+			    	else if(event->mask & IN_MOVED_FROM){
 					printf("Inotify event:File %s mode to another directory\n",filename);
-					fileDeleted(ptable,filename);
-            	}
-               	else if(event->mask & IN_MOVED_TO){
+					//fileDeleted(ptable,filename);
+					updated=1;
+			    	}
+			       	else if(event->mask & IN_MOVED_TO){
 					printf("Inotify event:File %s moved in\n",filename);
-					fileAdded(ptable,filename);
-            	}
- 				// haven't handle delete self mask
-            }
-
-
-            ept += sizeof(struct inotify_event) + event->len;
-        }
+					//fileAdded(ptable,filename);
+					updated=1;
+			    	}
+			}
+	 				// haven't handle delete self mask
+		    }		
+		    ept += sizeof(struct inotify_event) + event->len;
+	    }
+	    if(updated){
+		send_filetable();
+	    }
 //        send_filetable();
 	}
 }
@@ -121,6 +130,14 @@ FileInfo* getFileInfo(char* filename){
 	file->lastModifyTime=attrib.st_mtime;
 	return file;
 }
+void blockUpdate(){
+	block_updated=0;
+}
+
+void unblockUpdate(){
+	block_updated=1;
+}
+
 int freeAll(){
 
 }
