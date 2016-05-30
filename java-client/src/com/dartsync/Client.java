@@ -106,7 +106,6 @@ public class Client implements FileMonitorListener{
 		try{
 			Socket socket = new Socket(trackerAddress, Constants.PORT_TRACKER);
 			socket.setKeepAlive(true);
-			socket.setSoTimeout(Constants.TIMEOUT);
 			PrintWriter pw = new PrintWriter(socket.getOutputStream(),true);
 			BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			SegmentPeer segment = new SegmentPeer();

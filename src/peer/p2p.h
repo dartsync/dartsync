@@ -20,3 +20,4 @@ typedef struct temp_download_seg{
 }temp_download_t;
 int send_p2p_seg(int network_conn, peer2peer_seg* send_seg);
 void *p2p_upload(void* arg);
+void *p2p_upload_diff(void *arg);

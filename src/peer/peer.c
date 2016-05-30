@@ -392,6 +392,31 @@ void *file_upload_request_handler(){
 	}
 	return NULL;
 }
+
+void *file_upload_request_handler_diff(){
+	int server_sock_fd = get_server_socket_fd(PEER_DOWNLOAD_PORT_DIFFERENT,MAX_PEERS_NUM);
+	if(server_sock_fd < 0 ){
+		printf("unable to create listening socket for upload handler for diff platforms\n");
+		pthread_exit(NULL);
+		return NULL;
+	}
+	struct sockaddr_in client_address ;
+	int addr_length = sizeof(struct sockaddr);
+	printf("waiting for an upload request on port %d \n",PEER_DOWNLOAD_PORT_DIFFERENT);
+	while(1){
+		int new_connection = accept(server_sock_fd, (struct sockaddr_in *)&client_address, (socklen_t *) &addr_length);
+		printf("received a new upload request %d \n",new_connection);
+		if(new_connection > 0){
+			// create a new thread for the upload handler and
+			pthread_t upload_handler_thread_diff;
+			pthread_create(&upload_handler_thread_diff,NULL,p2p_upload_diff,(void*)&new_connection);
+		}else{
+			printf("Error in accepting new upload request for diff platform\n");
+		}
+	}
+	return NULL;
+}
+
 void start_peer_in_test() {
 	pthread_t file_upload_thread;
 	pthread_create(&file_upload_thread, NULL, file_upload_request_handler,NULL);
@@ -442,6 +467,12 @@ void start_peer(char *argv[]){
 	 */
 	pthread_t file_upload_thread ;
 	pthread_create(&file_upload_thread,NULL,file_upload_request_handler, NULL);
+
+	/**
+		 * starting thread for listening to upload request from java clients
+		 */
+	pthread_t file_upload_thread_diff ;
+	pthread_create(&file_upload_thread_diff,NULL,file_upload_request_handler, NULL);
 
 	while(1){
 		// keep receving message from tracker
