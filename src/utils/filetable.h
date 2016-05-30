@@ -38,6 +38,9 @@ int peernum;
 //for the file table on tracker, it records the ip of all peers which has the
 //newest edition of the file
 unsigned int peerip[MAX_PEER_NUM];
+// which type of peer is attached to client c/java
+unsigned int peer_type[MAX_PEER_NUM];
+
 }Node,*pNode;
 
 typedef struct filetable{
@@ -55,3 +58,4 @@ void filetable_print(peer_file_table* ptable);
 int file_table_deleteip(peer_file_table* ptable, unsigned int ip);
 int file_table_addip(peer_file_table* ptable,char* name, unsigned int ip);
 unsigned long getmyip();
+void append_node(Node *node, char *body);

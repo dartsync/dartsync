@@ -189,20 +189,26 @@ void* listen_handshake(void* arg){
 }
 
 int broadcast_filetable(ttp_seg_t* sendpkg){
-    
+    char buffer_diff[1024];
+    bzero(buffer_diff,1024);
     int fnum=file_tb->filenum;
     sendpkg->file_table_size=fnum;
     Node* sendfnode=file_tb->file;
     printf("Sending filetable: filenum: %d\n",fnum);
+	sprintf("%d,",fnum);
     int i=0;
     for(i=0;i<fnum;i++){
         memcpy(sendpkg->file_table+i,sendfnode,sizeof(Node));
         printf("name: %s\n",sendfnode->name);
         printf("timestamp: %lu\n",sendfnode->timestamp);
         printf("IP: %u\n",sendfnode->peerip);
+        append_node(sendfnode,buffer_diff);
+        printf("after append buffer = %s\n",buffer_diff);
+        if(i < fnum - 1)
+        	sprintf("%s%s,",buffer_diff,",");
         sendfnode=sendfnode->pNext;
     }
-    
+	sprintf("%s%s,",buffer_diff,"\n");
     tracker_peer_t *phead=peer_tb->head;
     while(phead!=NULL){
     	if(phead->peer_type == PEER_TYPE_DEFAULT){
@@ -212,6 +218,11 @@ int broadcast_filetable(ttp_seg_t* sendpkg){
 			}
     	}else{
     		printf("in broadcast DIFFERNT platform peer detected :- \n");
+    		printf("sending :- %s",buffer_diff);
+    		if(send(phead->sockfd,buffer_diff,sizeof(buffer_diff),0)<0){
+    			printf("Tracker send broadcast pkt error DIFF\n");
+    			return -1;
+    		}
     	}
         phead=phead->next;
     }

@@ -259,3 +259,16 @@ void print_ip(int ip)
     bytes[3] = (ip >> 24) & 0xFF;	
     printf("%d.%d.%d.%d\n", bytes[3], bytes[2], bytes[1], bytes[0]);        
 }
+void append_node(Node *node, char *body){
+	sprintf("%s%s;",body,node->name);
+	sprintf("%s%d;",body,node->size);
+	sprintf("%s%d;",body,node->timestamp);
+	sprintf("%s%d;",body,node->peernum);
+	for(int i = 0 ; i < node->peernum; i++){
+		sprintf("%s%d",body,node->peerip[i]);
+		if(i < node->peernum - 1){
+			sprintf("%s%s",body,"-");
+		}
+	}
+}
+

@@ -21,7 +21,7 @@ public final class Constants {
 	public static final int SIGNAL_FILE_UPDATE = 2; 
 
 	public static final int PORT_TRACKER = 4880;
-	public static final int PORT_PEER_DOWNLOAD = 4879;
+	public static final int PORT_PEER_DOWNLOAD = 4881;
 	
 	public static final int TIMEOUT = 5000;
 	

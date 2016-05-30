@@ -143,6 +143,7 @@ public class Client implements FileMonitorListener{
 		heartBeatThread.start();
 		fileUploadThread = new FileUploader(rootDir);
 		fileUploadThread.start();
+		
 		try {
 			if(heartBeatThread != null && heartBeatThread.isAlive()) heartBeatThread.join();
 			if(fileMonitor != null && fileMonitor.isAlive()) fileMonitor.join();
