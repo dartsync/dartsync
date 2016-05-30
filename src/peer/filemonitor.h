@@ -30,6 +30,8 @@ int fileModified(peer_file_table* ptable,char* filename ); //Called when a file 
 int fileDeleted(peer_file_table* ptable,char* filename); //Called when a file is deleted.
 int getAllFilesInfo(); //Get all filenames/sizes/timestamps in the directory
 FileInfo* getFileInfo(char* filename); //Get information of a specific file
+void blockUpdate();
+void unblockUpdate();
 int freeAll(); //Free all memory.
 int blockFileAddListenning(); //Prevent unnecessary alert when downloading new files
 int unblockFuleAddListenning(); //Unblock it.
