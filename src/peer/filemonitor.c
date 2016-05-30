@@ -35,28 +35,28 @@ int watchDirectory(peer_file_table* ptable,char* directory){
 			    	if(event->mask & IN_CREATE){
 			    		printf("Inotify event:File %s creat\n",filename);
 			    		//updated=fileAdded(ptable,filename);
-			    		fileAdded(ptable,filename);
+			    		updated=fileAdded(ptable,filename);
 					//updated=1;
 			    	}
 			    	else if(event->mask & IN_MODIFY){
-						printf("Inotify event:File %s modify\n",filename);
-						updated=fileModified(ptable,filename);
+					printf("Inotify event:File %s modify\n",filename);
+					updated=fileModified(ptable,filename);
 					//updated=1;
 			    	}
 			    	else if(event->mask & IN_DELETE){
-						printf("Inotify event:File %s delete\n",filename);
-						fileDeleted(ptable,filename);
-						updated=1;
+					printf("Inotify event:File %s delete\n",filename);
+					fileDeleted(ptable,filename);
+					updated=1;
 			    	}
 			    	else if(event->mask & IN_MOVED_FROM){
-						printf("Inotify event:File %s mode to another directory\n",filename);
-						fileDeleted(ptable,filename);
-						updated=1;
+					printf("Inotify event:File %s mode to another directory\n",filename);
+					fileDeleted(ptable,filename);
+					updated=1;
 			    	}
-				       	else if(event->mask & IN_MOVED_TO){
-						printf("Inotify event:File %s moved in\n",filename);
-						updated=fileAdded(ptable,filename);
-						//updated=1;
+				else if(event->mask & IN_MOVED_TO){
+					printf("Inotify event:File %s moved in\n",filename);
+					updated=fileAdded(ptable,filename);
+					//updated=1;
 			    	}
 			}
 	 				// haven't handle delete self mask
@@ -64,7 +64,9 @@ int watchDirectory(peer_file_table* ptable,char* directory){
 		    ept += sizeof(struct inotify_event) + event->len;
 	    }
 	    if(updated){
-		send_filetable();
+		if(dtable_empty){
+			send_filetable();;	
+		}	
 	    }
         //send_filetable();
 	}
@@ -105,7 +107,6 @@ int fileAdded(peer_file_table* ptable,char* filename){
 		}
 		free(finfo);
 		filetable_print(ptable);
-		printf("Sending filetable\n");
 		//send_filetable();
 		return 1;
 	}

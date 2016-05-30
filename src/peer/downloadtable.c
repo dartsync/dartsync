@@ -12,6 +12,9 @@ download_table* downloadtable_create(){
 int is_exist(dNode* node){
 	dNode* tmp=dtable->file;	
 	int i;
+	if(tmp==NULL){
+		return -1;	
+	}
 	for(i=0;i<dtable->dfilenum;i++){
 //		if((strcmp(tmp->name,node->name)==0)&&(tmp->size==node->size)&&(tmp->timestamp==node->timestamp)){
 		if(strcmp(tmp->name,node->name)==0){
@@ -119,6 +122,14 @@ int getdnodebyname(dNode* node){
 			return 1;
 		}		
 		tmp=tmp->pNext;
+	}
+	return -1;
+}
+
+int dtable_empty(){
+	dNode* tmp=dtable->file;
+	if(tmp==NULL){
+		return 1;
 	}
 	return -1;
 }
