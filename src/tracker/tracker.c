@@ -205,10 +205,14 @@ int broadcast_filetable(ttp_seg_t* sendpkg){
     
     tracker_peer_t *phead=peer_tb->head;
     while(phead!=NULL){
-        if(tracker_sendseg(phead->sockfd,sendpkg)<0){
-            printf("Tracker send broadcast pkg error\n");
-            return -1;
-        }
+    	if(phead->peer_type == PEER_TYPE_DEFAULT){
+			if(tracker_sendseg(phead->sockfd,sendpkg)<0){
+				printf("Tracker send broadcast pkg error\n");
+				return -1;
+			}
+    	}else{
+    		printf("in broadcast DIFFERNT platform peer detected :- \n");
+    	}
         phead=phead->next;
     }
     return 1;
@@ -348,16 +352,16 @@ void *differnt_platform_handler(){
 		printf("different platform handler started ... conn id = %d\n",serverSockFD);
 		while (TRUE) {
 			struct sockaddr_in clt_addr;
-			int cltlen = sizeof(clt_addr);
+			socklen_t cltlen = sizeof(struct sockaddr_in);
 			printf("listening for diff paltforms\n");
-			int peer_conn = accept(serverSockFD,(struct sockaddr*) &clt_addr, (socklen_t *) &cltlen);
+			int peer_conn = accept(serverSockFD,(struct sockaddr*) &clt_addr,&cltlen);
 			printf("Received new client in diff platform handler");
 			if (peer_conn < 0) {
 				perror("ERROR accepting client from different platform");
 				continue;
 			}
 			pthread_mutex_lock(peer_tb_mutex);
-			peer_table_add(peer_tb, &clt_addr.sin_addr, peer_conn);
+			peer_table_add_d(peer_tb, &clt_addr.sin_addr, peer_conn);
 			pthread_mutex_unlock(peer_tb_mutex);
 			pthread_mutex_lock(peer_tb_mutex);
 			peer_table_print(peer_tb);

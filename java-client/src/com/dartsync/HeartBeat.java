@@ -25,7 +25,7 @@ public class HeartBeat extends Thread {
 	public void run() {
 		try{
 			while(trackerSocket != null && trackerSocket.isConnected()){
-				System.out.println("heartbeat thread sleeping");
+				//System.out.println("heartbeat thread sleeping");
 				Thread.sleep(interval);
 				sendHeartBeat();
 			}
@@ -43,7 +43,7 @@ public class HeartBeat extends Thread {
 		segment.type = Constants.SIGNAL_HEART_BEAT;
 		PrintWriter pw = new PrintWriter(trackerSocket.getOutputStream(),true);
 		pw.println(segment.getTCPString());
-		System.out.println("heartbeat sent");
+		//System.out.println("heartbeat sent");
 	}
 	
 }

@@ -43,6 +43,31 @@ int peer_table_add(peer_table *table, unsigned int ip_addr, int conn){
     p->last_time_stamp = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
     p->next = table->head;
     p->sockfd = conn;
+    p->peer_type = PEER_TYPE_DEFAULT;
+    table->head = p;
+    table->peer_num++;
+    printf("Add peer %u in connection %d\n", p->ip, conn);
+    return 1;
+}
+int peer_table_add_d(peer_table *table, unsigned int ip_addr, int conn){
+    //    char ip_addr[IP_LEN];
+    //    memset(ip_addr, 0, sizeof(char) * IP_LEN);
+    //    if(inet_ntop(AF_INET, &(addr->s_addr), ip_addr, INET_ADDRSTRLEN) == NULL){
+    //        printf("Error: cannot get node ID from ip\n");
+    //        return -1;
+    //    }
+
+    struct timeval currentTime;
+    gettimeofday(&currentTime, NULL);
+
+    tracker_peer_t *p = (tracker_peer_t*) malloc(sizeof(tracker_peer_t));
+    // strncpy(p->ip, ip_addr, IP_LEN);
+    // p->ip = ntohl(addr->s_addr);
+    p->ip = ip_addr;
+    p->last_time_stamp = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
+    p->next = table->head;
+    p->sockfd = conn;
+    p->peer_type = PEER_TYPE_DIFFERENT;
     table->head = p;
     table->peer_num++;
     printf("Add peer %u in connection %d\n", p->ip, conn);

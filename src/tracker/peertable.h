@@ -30,6 +30,8 @@ typedef struct _tracker_side_peer_t {
     int sockfd;
     //Pointer to the next peer, linked list.
     struct _tracker_side_peer_t *next;
+
+    int peer_type;
 } tracker_peer_t;
 
 // In case if we want add some features into this structure
@@ -43,6 +45,8 @@ peer_table* peer_table_create();
 int peer_table_destroy(peer_table *table);
 
 int peer_table_add(peer_table *table, unsigned int ip_addr, int conn);
+int peer_table_add_d(peer_table *table, unsigned int ip_addr, int conn);
+
 
 int peer_table_delete(peer_table *table, unsigned int ip_addr);
 

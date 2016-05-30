@@ -44,5 +44,9 @@
 
 #define IP_LEN 16
 
+#define PEER_TYPE_DEFAULT 1
+
+#define PEER_TYPE_DIFFERENT 2
+
 
 #endif
