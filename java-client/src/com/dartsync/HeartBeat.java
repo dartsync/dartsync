@@ -32,7 +32,7 @@ public class HeartBeat extends Thread {
 		}catch(InterruptedException ex){
 			System.out.println("Heartbeat interrupted");
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			// TODO Auto-generated catch blocktokens[]to
 			e.printStackTrace();
 		}
 		

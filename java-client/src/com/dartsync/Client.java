@@ -3,13 +3,10 @@
  */
 package com.dartsync;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -27,7 +24,7 @@ public class Client implements FileMonitorListener{
 	
 	private Thread heartBeatThread = null;
 	private Thread fileMonitor = null;
-	private Thread peerThread = null;
+	private Thread fileUploadThread = null;
 	private Thread trackerThread = null;
 	
 	private Boolean isClientRunning = false;
@@ -40,6 +37,10 @@ public class Client implements FileMonitorListener{
 		this.trackerInfo = info;
 	}
 	
+	public boolean isClientRunning(){
+		return isClientRunning;
+	}
+	
 	public void stopClient(){
 		isClientRunning = false;
 		try{
@@ -49,8 +50,8 @@ public class Client implements FileMonitorListener{
 			if(heartBeatThread!=null){
 				heartBeatThread.interrupt();
 			}
-			if(peerThread!=null){
-				peerThread.interrupt();
+			if(fileUploadThread!=null){
+				fileUploadThread.interrupt();
 			}
 			if(fileMonitor!=null){
 				trackerThread.interrupt();
@@ -141,10 +142,12 @@ public class Client implements FileMonitorListener{
 		fileMonitor.start();
 		heartBeatThread = new HeartBeat(trackerInfo.socket,trackerInfo.heartBeatInterval);
 		heartBeatThread.start();
+		fileUploadThread = new FileUploader(rootDir);
+		fileUploadThread.start();
 		try {
 			if(heartBeatThread != null && heartBeatThread.isAlive()) heartBeatThread.join();
 			if(fileMonitor != null && fileMonitor.isAlive()) fileMonitor.join();
-			if(peerThread != null && peerThread.isAlive()) peerThread.join();
+			if(fileUploadThread != null && fileUploadThread.isAlive()) fileUploadThread.join();
 			if(trackerThread != null && trackerThread.isAlive())  trackerThread.join();
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block

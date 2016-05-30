@@ -414,8 +414,6 @@ void start_peer(char *argv[]){
   		}
   		printf("Received segment from tracker\n");
   		printf("Received filetable size: %d \n",recvseg.file_table_size);
-		
-
   		peer_update_filetable(recvseg.file_table,recvseg.file_table_size);
 	}
 
