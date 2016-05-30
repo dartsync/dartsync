@@ -1,4 +1,5 @@
 #include "filemonitor.h"
+#include "downloadtable.h"
 
 char DIR_PATH[128];
 int block_updated;
@@ -33,28 +34,29 @@ int watchDirectory(peer_file_table* ptable,char* directory){
 			if(block_updated){
 			    	if(event->mask & IN_CREATE){
 			    		printf("Inotify event:File %s creat\n",filename);
-			    		//fileAdded(ptable,filename);
-					updated=1;
+			    		//updated=fileAdded(ptable,filename);
+			    		fileAdded(ptable,filename);
+					//updated=1;
 			    	}
 			    	else if(event->mask & IN_MODIFY){
-					printf("Inotify event:File %s modify\n",filename);
-					//fileModified(ptable,filename);
-					updated=1;
+						printf("Inotify event:File %s modify\n",filename);
+						updated=fileModified(ptable,filename);
+					//updated=1;
 			    	}
 			    	else if(event->mask & IN_DELETE){
-					printf("Inotify event:File %s delete\n",filename);
-					//fileDeleted(ptable,filename);
-					updated=1;
+						printf("Inotify event:File %s delete\n",filename);
+						fileDeleted(ptable,filename);
+						updated=1;
 			    	}
 			    	else if(event->mask & IN_MOVED_FROM){
-					printf("Inotify event:File %s mode to another directory\n",filename);
-					//fileDeleted(ptable,filename);
-					updated=1;
+						printf("Inotify event:File %s mode to another directory\n",filename);
+						fileDeleted(ptable,filename);
+						updated=1;
 			    	}
-			       	else if(event->mask & IN_MOVED_TO){
-					printf("Inotify event:File %s moved in\n",filename);
-					//fileAdded(ptable,filename);
-					updated=1;
+				       	else if(event->mask & IN_MOVED_TO){
+						printf("Inotify event:File %s moved in\n",filename);
+						updated=fileAdded(ptable,filename);
+						//updated=1;
 			    	}
 			}
 	 				// haven't handle delete self mask
@@ -64,7 +66,7 @@ int watchDirectory(peer_file_table* ptable,char* directory){
 	    if(updated){
 		send_filetable();
 	    }
-//        send_filetable();
+        //send_filetable();
 	}
 }
 //read configuration file and find the dir to be monitored;
@@ -90,22 +92,40 @@ int fileAdded(peer_file_table* ptable,char* filename){
 	printf("In fileAdded function\n");
 	FileInfo* finfo=getFileInfo(filename);
 	printf("File size: %u",finfo->size);
-	filetable_addnode(ptable, finfo->size, filename, finfo->lastModifyTime);
+	dNode dfile;
+	memcpy(dfile.name,filename,strlen(filename));
+	//dfile->size=finfo->size;
+	//dfile->timestamp=finfo->timestamp;
+	if(is_exist(&dfile)<0){
+		downloadtable_print();
+		printf("fileadd: file not exist in downloadtable\n");
+		if(filetable_is_exist(ptable,finfo->size, filename)<0){
+			filetable_addnode(ptable, finfo->size, filename, finfo->lastModifyTime);
+		}
+		free(finfo);
+		filetable_print(ptable);
+		printf("Sending filetable\n");
+		//send_filetable();
+		return 1;
+	}
 	free(finfo);
-	filetable_print(ptable);
-	printf("Sending filetable\n");
-	send_filetable();
-	return 1;
+	return -1;
 }
 
 int fileModified(peer_file_table* ptable,char* filename ){
 	printf("In fileModifieded function\n");
 	FileInfo* finfo=getFileInfo(filename);
-	filetable_modifynode(ptable, finfo->size, filename, finfo->lastModifyTime);
+	dNode dfile;
+	memcpy(dfile.name,filename,strlen(filename));
+	if(is_exist(&dfile)<0){
+		filetable_modifynode(ptable, finfo->size, filename, finfo->lastModifyTime);
+		free(finfo);
+		filetable_print(ptable);
+		//send_filetable();
+		return 1;
+	}
 	free(finfo);
-	filetable_print(ptable);
-	send_filetable();
-	return 1;
+	return -1;
 }
 int fileDeleted(peer_file_table* ptable,char* filename){
 	printf("In fileDeleted function\n");
@@ -113,7 +133,7 @@ int fileDeleted(peer_file_table* ptable,char* filename){
 	filetable_delnode(ptable, finfo->size, filename, finfo->lastModifyTime);
 	free(finfo);
 	filetable_print(ptable);
-	send_filetable();
+	//send_filetable();
 	return 1;
 }
 int getAllFilesInfo(){

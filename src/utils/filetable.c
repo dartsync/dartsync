@@ -182,6 +182,7 @@ int filetable_delnode(peer_file_table* ptable, int size, char* name, unsigned lo
 			return -1;
 		}
 		else{
+			ptable->filenum=0;
 			ptable->file=NULL;
 			return 1;
 		}
@@ -234,10 +235,10 @@ void filetable_print(peer_file_table* ptable){
 }
 
 unsigned long getmyip(){
-//	char hostname[100];
+	char hostname[100];
 //	hostname[99]="\0";
-	char* hostname="129.170.212.204";
-//	gethostname(hostname,sizeof(hostname)); // get the ip address of local machine
+	//char* hostname="129.170.212.204";
+	gethostname(hostname,sizeof(hostname)); // get the ip address of local machine
 	struct hostent *hostInfo;
   	hostInfo = gethostbyname(hostname);
   	if(!hostInfo) {
@@ -258,4 +259,17 @@ void print_ip(int ip)
     bytes[2] = (ip >> 16) & 0xFF;
     bytes[3] = (ip >> 24) & 0xFF;	
     printf("%d.%d.%d.%d\n", bytes[3], bytes[2], bytes[1], bytes[0]);        
+}
+
+int filetable_is_exist(peer_file_table* table,int size, char* name){
+	Node* tmp=table->file;	
+	int i;
+	for(i=0;i<table->filenum;i++){
+//		if((strcmp(tmp->name,node->name)==0)&&(tmp->size==node->size)&&(tmp->timestamp==node->timestamp)){
+		if(strcmp(tmp->name,name)==0&&tmp->size==size){
+			return 1;
+		}
+		tmp=tmp->pNext;
+	}
+	return -1;
 }
