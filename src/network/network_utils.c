@@ -114,7 +114,8 @@ int get_client_socket_fd_ip(unsigned int ip_address, int portNumber){
 		printf("setsockopt failed\n");
 	}
 	if(connect(socketFD,(struct sockaddr *)&server_addr,sizeof(server_addr)) < 0){
-		printf("connection failed to %d",ip_address);
+		perror("Connection fail");
+		printf("connection failed to %u \n",ip_address);
 		close(socketFD);
 		return -1;
 	}

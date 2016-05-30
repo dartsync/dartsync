@@ -55,7 +55,7 @@ int filetable_addnode(peer_file_table* ptable, int size, char* name, unsigned lo
 		memset(fnode,0,sizeof(Node));
 		fnode->size=size;
 		memcpy(fnode->name,name,strlen(name));
-		printf("Init node name: %s",fnode->name);
+		//printf("Init node name: %s",fnode->name);
 		fnode->timestamp=timestamp;
 		fnode->pNext=NULL;
 		fnode->peernum=1;
@@ -218,7 +218,7 @@ void filetable_destroy(peer_file_table* table){
 }
 
 void filetable_print(peer_file_table* ptable){
-	printf("In filetable_print function\n");
+	printf("\n----------------In filetable_print function---------------------\n");
 	printf("Dir file number: %d\n",ptable->filenum);
 	Node* tmp=ptable->file;
 	while(tmp!=NULL){

@@ -22,8 +22,8 @@
 #include "../utils/constants.h"
 
 typedef struct _tracker_side_peer_t {
-    //Remote peer IP address, 16 bytes.
-    char ip[IP_LEN];
+    //Remote peer IP address, use unsigned int.
+    unsigned int ip;
     //Last alive timestamp of this peer.
     unsigned long last_time_stamp;
     //TCP connection to this remote peer.
@@ -42,9 +42,9 @@ peer_table* peer_table_create();
 
 int peer_table_destroy(peer_table *table);
 
-int peer_table_add(peer_table *table, struct in_addr* addr, int conn);
+int peer_table_add(peer_table *table, unsigned int ip_addr, int conn);
 
-int peer_table_delete(peer_table *table, const char *ip_addr);
+int peer_table_delete(peer_table *table, unsigned int ip_addr);
 
 int peer_table_update_timestamp(peer_table *table, int conn);
 
