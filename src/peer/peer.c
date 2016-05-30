@@ -32,8 +32,8 @@ int connectToTracker(){
   int out_conn;
   struct sockaddr_in servaddr;
   servaddr.sin_family =AF_INET;
-  servaddr.sin_addr.s_addr= inet_addr("129.170.214.100");
-  //servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
+  //servaddr.sin_addr.s_addr= inet_addr("129.170.214.100");
+  servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
   servaddr.sin_port = htons(TRACKER_PORT);
   out_conn = socket(AF_INET,SOCK_STREAM,6);
 
@@ -65,6 +65,7 @@ int connectToTracker(){
 int send_registion(int out_conn){
   int ret;
   ptt_seg_t* sendseg=(ptt_seg_t*)malloc(sizeof(ptt_seg_t));
+  memset(sendseg,0,sizeof(ptt_seg_t));
   sendseg->protocol_len=sizeof(ptt_seg_t);
 //  sendseg->protocol_name=;
   sendseg->type=REGISTER;
@@ -330,13 +331,14 @@ void *file_download_handler(void *file_info){
 			
 		}
 	}
-	printf("remove node from download table,add to filetable\n");
+	/*printf("remove node from download table,add to filetable\n");
 	dNode dfile;
+	memset(&dfile,0,sizeof(dNode));
 	memcpy(dfile.name,file_node->name,strlen(file_node->name));
 	dfile.size=file_node->size;
 	dfile.timestamp=file_node->timestamp;
 	downloadtable_delnode(&dfile);
-	filetable_addnode(filetable, dfile.size, dfile.name, dfile.timestamp);
+	filetable_addnode(filetable, dfile.size, dfile.name, dfile.timestamp);*/
 	//unblockUpdate();
 	//send_filetable();
 	pthread_exit(NULL);
@@ -347,6 +349,7 @@ int download_file(Node* file_node){
 	printf(" in download file \n");
 	downloadtable_print();
 	dNode dfile;
+	memset(&dfile,0,sizeof(dNode));
 	memcpy(dfile.name,file_node->name,strlen(file_node->name));
 	dfile.size=file_node->size;
 	dfile.timestamp=file_node->timestamp;
@@ -370,7 +373,8 @@ void* heartbeat(){
 	while(1){
 		//sleep(HEARTBEAT_INTERVAL);
 		select(0,0,0,0,&(struct timeval){.tv_usec = heartbeat_interval * 1000000 * 0.9});		
-		ptt_seg_t* sendseg=(ptt_seg_t*)malloc(sizeof(ptt_seg_t)); 
+		ptt_seg_t* sendseg=(ptt_seg_t*)malloc(sizeof(ptt_seg_t));
+		memset(sendseg,0,sizeof(ptt_seg_t));
 //		sendseg->protocol_len=;
 //		sendseg->protocol_name=;
 		sendseg->type=KEEP_ALIVE;

@@ -100,6 +100,7 @@ int fileAdded(peer_file_table* ptable,char* filename){
 		downloadtable_print();
 		printf("fileadd: file not exist in downloadtable\n");
 		if(filetable_is_exist(ptable,finfo->size, filename)<0){
+			printf("fileadd: node already have\n");
 			filetable_addnode(ptable, finfo->size, filename, finfo->lastModifyTime);
 		}
 		free(finfo);
@@ -117,12 +118,26 @@ int fileModified(peer_file_table* ptable,char* filename ){
 	FileInfo* finfo=getFileInfo(filename);
 	dNode dfile;
 	memcpy(dfile.name,filename,strlen(filename));
+	printf("Timestamp: %u\n",finfo->lastModifyTime);
 	if(is_exist(&dfile)<0){
 		filetable_modifynode(ptable, finfo->size, filename, finfo->lastModifyTime);
 		free(finfo);
 		filetable_print(ptable);
 		//send_filetable();
 		return 1;
+	}
+	else{
+		printf("remove node from download table,add to filetable\n");
+		dNode dfile;
+		memset(&dfile,0,sizeof(dNode));
+		memcpy(dfile.name,filename,strlen(filename));
+		getdnodebyname(&dfile);
+		if(dfile.size!=finfo->size){
+			return -1;		
+		}
+		downloadtable_delnode(&dfile);
+		filetable_addnode(ptable, dfile.size, dfile.name, dfile.timestamp);
+
 	}
 	free(finfo);
 	return -1;
@@ -142,7 +157,7 @@ int getAllFilesInfo(){
 FileInfo* getFileInfo(char* filename){
 	char path[100];
 	sprintf(path,"%s/%s",DIR_PATH,filename);
-	sleep(1);
+	//sleep(1);
 	FileInfo* file=(FileInfo*)malloc(sizeof(FileInfo));
 	struct stat attrib;
 	stat(path, &attrib);

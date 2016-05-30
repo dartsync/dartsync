@@ -98,13 +98,28 @@ void downloadtable_destroy(){
 }
 
 void downloadtable_print(){
-		printf("\n----------------In downloadtable_print function---------------------\n");
-		dNode* tmp=dtable->file;
-		while(tmp!=NULL){
-			printf("Filename:%s size:%d timestamp: %u \n",tmp->name,tmp->size,tmp->timestamp);
-			int i;
-			tmp=tmp->pNext;
-		}
-		printf("Return\n");
+	printf("\n----------------In downloadtable_print function---------------------\n");
+	dNode* tmp=dtable->file;
+	while(tmp!=NULL){
+		printf("Filename:%s size:%d timestamp: %u \n",tmp->name,tmp->size,tmp->timestamp);
+		int i;
+		tmp=tmp->pNext;
+	}
+	printf("Return\n");
 
 }
+
+int getdnodebyname(dNode* node){
+	dNode* tmp=dtable->file;
+	int i;
+	for(i=0;i<dtable->dfilenum;i++){
+		if(strcmp(node->name,tmp->name)==0){
+			node->size=tmp->size;
+			node->timestamp=tmp->timestamp;
+			return 1;
+		}		
+		tmp=tmp->pNext;
+	}
+	return -1;
+}
+

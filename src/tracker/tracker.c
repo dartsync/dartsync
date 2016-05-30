@@ -193,13 +193,17 @@ int broadcast_filetable(ttp_seg_t* sendpkg){
     int fnum=file_tb->filenum;
     sendpkg->file_table_size=fnum;
     Node* sendfnode=file_tb->file;
-    printf("Sending filetable: filenum: %d\n",fnum);
+    printf("\n-------Sending filetable: filenum: %d------\n",fnum);
     int i=0;
     for(i=0;i<fnum;i++){
         memcpy(sendpkg->file_table+i,sendfnode,sizeof(Node));
         printf("name: %s\n",sendfnode->name);
         printf("timestamp: %lu\n",sendfnode->timestamp);
-        printf("IP: %u\n",sendfnode->peerip);
+	int j = 0;
+	for(j = 0; j < sendfnode->peernum; j++){
+		printf("IP: %u     \n",sendfnode->peerip[j]);
+	}
+        printf("\n");
         sendfnode=sendfnode->pNext;
     }
     
@@ -226,7 +230,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
     
     for(i = 0; i < num; i++){
         if(curftable != NULL && strcmp(head[i].name, curftable->name) == 0){
-    printf("compare node in list %s\n", head[i].name);
+    printf("compare node in list %s", head[i].name);
             if(curftable->size == head[i].size && curftable->timestamp == head[i].timestamp){
                 int flag = 1;
                 for(int i = 0; i < curftable->peernum; i++){
@@ -238,15 +242,18 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                 if(flag == 1 && curftable->peernum < MAX_PEER_NUM){
                     curftable->peerip[curftable->peernum] = recvseg->peer_ip;
                     curftable->peernum++;
-                    change = 1;
+                    // change = 1;
                 }
+		printf(" size and time stamp didn't change\n");
             }else{
                 curftable->size = head[i].size;
                 curftable->timestamp = head[i].timestamp;
                 curftable->peerip[0] = recvseg->peer_ip;
                 curftable->peernum = 1;
                 change = 1;
+		printf(" size and time stamp change\n");
             }
+		printf("The size is %d, the time stamp is: %d\n", head[i].size, head[i].timestamp);
             prev = curftable;
             curftable = curftable->pNext;
         }else if(curftable != NULL && strcmp(head[i].name, curftable->name) < 0){

@@ -33,3 +33,4 @@ int downloadtable_addnode(dNode* node);
 int downloadtable_delnode(dNode* node);
 void downloadtable_destroy();
 void downloadtable_print();
+int getdnodebyname(dNode* node);
