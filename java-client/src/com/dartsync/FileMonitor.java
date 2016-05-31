@@ -9,8 +9,6 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
-import java.util.ArrayList;
-import java.util.List;
 
 public class FileMonitor extends Thread {
 	
@@ -30,14 +28,12 @@ public class FileMonitor extends Thread {
 	
 	private File rootDir = null;
 	private FileMonitorListener mListener = null;
-	private TrackerInfo trackerSocket = null;
-	private List<File> fileList = null;
+	private TrackerInfo trackerInfo = null;
 	
 	public FileMonitor(File root, TrackerInfo trackerSocket, FileMonitorListener fileListener){
-		this.trackerSocket = trackerSocket;
+		this.trackerInfo = trackerSocket;
 		this.mListener = fileListener;
 		this.rootDir = root;
-		this.fileList = new ArrayList<File>();
 	}
 	
 	private void updateFileChanges(WatchEvent<?> event){
@@ -73,8 +69,8 @@ public class FileMonitor extends Thread {
 
 	public void onFileUpdated(File filePath) {
 		System.out.println("onFileUpdated " + filePath.toString());
-		if(!fileList.contains(filePath) && isValidFile(filePath)){
-			fileList.add(filePath);
+		if(!trackerInfo.getFileList().contains(filePath) && isValidFile(filePath)){
+			trackerInfo.getFileList().add(filePath);
 			System.out.println("Added file to list :- " + filePath.getName());
 		}else{
 			System.out.println("Discarded file from adding to list :- " + filePath.getName());
@@ -94,7 +90,7 @@ public class FileMonitor extends Thread {
 
 		try {
 			updateExistingFiles();
-			if(fileList.size() > 0){
+			if(trackerInfo.getFileList().size() > 0){
 				sendFileBroadCast();
 			}
 			watchService = path.getFileSystem().newWatchService();
@@ -131,11 +127,11 @@ public class FileMonitor extends Thread {
 		peer.type = Constants.SIGNAL_FILE_UPDATE;
 		peer.protocolLength = 0;
 		peer.peer_ip = Client.getLocalIp();
-		peer.fileList.addAll(fileList);
+		peer.fileList.addAll(trackerInfo.getFileList());
 		String tcpString = peer.getTCPString();
 		System.out.println("File update = " + tcpString);	
 		System.out.println("Sending to socket");
-		PrintWriter pw = new PrintWriter(trackerSocket.getSocket().getOutputStream(), true);
+		PrintWriter pw = new PrintWriter(trackerInfo.getSocket().getOutputStream(), true);
 		pw.println(tcpString);
 		System.out.println("sent to socket");
 	}
@@ -144,9 +140,9 @@ public class FileMonitor extends Thread {
 		File[] files = rootDir.listFiles();
 		if(files != null ){
 			for (File file : files) {
-				if(!fileList.contains(file) && isValidFile(file)){
+				if(!trackerInfo.getFileList().contains(file) && isValidFile(file)){
 					System.out.println("Already Exisitng :- " + file.getName());
-					fileList.add(file);
+					trackerInfo.getFileList().add(file);
 				}
 			}
 		}

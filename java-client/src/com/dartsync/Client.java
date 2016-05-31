@@ -26,7 +26,7 @@ public class Client implements FileMonitorListener{
 	private Thread heartBeatThread = null;
 	private Thread fileMonitor = null;
 	private Thread fileUploadThread = null;
-	private Thread trackerThread = null;
+	private Thread broadcastThread = null;
 	
 	private Boolean isClientRunning = false;
 	private TrackerInfo trackerInfo;
@@ -45,8 +45,8 @@ public class Client implements FileMonitorListener{
 	public void stopClient(){
 		isClientRunning = false;
 		try{
-			if(trackerThread!=null){
-				trackerThread.interrupt();
+			if(broadcastThread!=null){
+				broadcastThread.interrupt();
 			}
 			if(heartBeatThread!=null){
 				heartBeatThread.interrupt();
@@ -55,7 +55,7 @@ public class Client implements FileMonitorListener{
 				fileUploadThread.interrupt();
 			}
 			if(fileMonitor!=null){
-				trackerThread.interrupt();
+				broadcastThread.interrupt();
 			}
 		}catch(Exception ex){
 			ex.printStackTrace();
@@ -145,12 +145,13 @@ public class Client implements FileMonitorListener{
 		heartBeatThread.start();
 		fileUploadThread = new FileUploader(rootDir);
 		fileUploadThread.start();
-		
+		broadcastThread = new BroadcastThread(trackerInfo);
+		broadcastThread.start();
 		try {
 			if(heartBeatThread != null && heartBeatThread.isAlive()) heartBeatThread.join();
 			if(fileMonitor != null && fileMonitor.isAlive()) fileMonitor.join();
 			if(fileUploadThread != null && fileUploadThread.isAlive()) fileUploadThread.join();
-			if(trackerThread != null && trackerThread.isAlive())  trackerThread.join();
+			if(broadcastThread != null && broadcastThread.isAlive())  broadcastThread.join();
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

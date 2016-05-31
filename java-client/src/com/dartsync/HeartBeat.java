@@ -5,7 +5,6 @@ package com.dartsync;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.Socket;
 
 /**
  * @author Vishal Gaurav
@@ -32,7 +31,6 @@ public class HeartBeat extends Thread {
 		}catch(InterruptedException ex){
 			System.out.println("Heartbeat interrupted");
 		} catch (IOException e) {
-			// TODO Auto-generated catch blocktokens[]to
 			e.printStackTrace();
 		}
 		
@@ -44,7 +42,6 @@ public class HeartBeat extends Thread {
 		segment.peer_ip = Client.getLocalIp();
 		PrintWriter pw = new PrintWriter(trackerSocket.getSocket().getOutputStream(),true);
 		pw.println(segment.getTCPString());
-		//System.out.println("heartbeat sent");
 	}
 	
 }
