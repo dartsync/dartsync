@@ -314,6 +314,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                 curftable->size = head[i].size;
                 curftable->timestamp = head[i].timestamp;
                 curftable->peerip[0] = recvseg->peer_ip;
+                curftable->peer_type[0] = peer_table_get_type(peer_tb,recvseg->peer_ip);
                 curftable->peernum = 1;
                 change = 1;
 		printf(" size and time stamp change\n");
