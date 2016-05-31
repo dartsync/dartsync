@@ -177,14 +177,15 @@ int fileAdded(peer_file_table* ptable,char* filename){
 	FileInfo* finfo=getFileInfo(filename);
 	printf("File size: %u",finfo->size);
 	dNode dfile;
-	memcpy(dfile.name,filename,strlen(filename));
+memset(&dfile, 0, sizeof(dNode));	
+memcpy(dfile.name,filename,strlen(filename));
 	//dfile->size=finfo->size;
 	//dfile->timestamp=finfo->timestamp;
 	if(is_exist(&dfile)<0){
 		downloadtable_print();
 		printf("fileadd: file not exist in downloadtable\n");
 		if(filetable_is_exist(ptable,finfo->size, filename)<0){
-			printf("fileadd: node already have\n");
+			printf("fileadd: node not already have\n");
 			filetable_addnode(ptable, finfo->size, filename, finfo->lastModifyTime);
 		}
 		free(finfo);
@@ -200,6 +201,7 @@ int fileModified(peer_file_table* ptable,char* filename ){
 	printf("In fileModifieded function\n");
 	FileInfo* finfo=getFileInfo(filename);
 	dNode dfile;
+	memset(&dfile, 0, sizeof(dNode));
 	memcpy(dfile.name,filename,strlen(filename));
 	printf("Timestamp: %u\n",finfo->lastModifyTime);
 	if(is_exist(&dfile)<0){
@@ -216,11 +218,13 @@ int fileModified(peer_file_table* ptable,char* filename ){
 		memcpy(dfile.name,filename,strlen(filename));
 		getdnodebyname(&dfile);
 		if(dfile.size!=finfo->size){
-			return -1;		
+		printf("dfile size: %d, finfo size: %d add fail, hehe\n", dfile.size, finfo->size);	
+		return -1;		
 		}
 		downloadtable_delnode(&dfile);
 		filetable_addnode(ptable, dfile.size, dfile.name, dfile.timestamp);
-
+		downloadtable_print();
+filetable_print(ptable);
 	}
 	free(finfo);
 	return -1;
