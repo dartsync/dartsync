@@ -299,6 +299,7 @@ void *file_download_handler(void *file_info){
 
 	if(file_node){
 		int chunks = (file_node->size > file_node->peernum) ? file_node->peernum : file_node->size ;
+		//chunks = 1;
 		if(chunks > 0){
 			printf("chunks available = %d \n",chunks);
 			temp_download_t multi_threads[chunks] ;
@@ -328,7 +329,11 @@ void *file_download_handler(void *file_info){
 				fclose(main_file);
 			}
 			printf("merge file success \n");
-			
+		}else if(file_node->size == 0 && file_node->peernum != 0){
+			//download it from a peer
+		}else{
+			//tell tracker that none have the file
+			// will not use I think
 		}
 	}
 	/*printf("remove node from download table,add to filetable\n");
@@ -412,7 +417,10 @@ void *file_upload_request_handler(){
 		if(new_connection > 0){
 			// create a new thread for the upload handler and
 			pthread_t upload_handler_thread;
-			pthread_create(&upload_handler_thread,NULL,p2p_upload,(void*)&new_connection);
+            int* connew = (int*) malloc(sizeof(int));
+            *connew = new_connection;
+            
+			pthread_create(&upload_handler_thread,NULL,p2p_upload,(void*)connew);
 		}else{
 			printf("Error in accepting new upload request\n");
 		}

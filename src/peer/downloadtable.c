@@ -32,7 +32,7 @@ int downloadtable_addnode(dNode* node){
 	}
 	dNode* tmp=dtable->file;
 	int i;
-	for(i=0;i<dtable->dfilenum;i++){
+	for(i=0;i<dtable->dfilenum-1;i++){
 		tmp=tmp->pNext;
 	}
 	dNode* tmpnode=(dNode*)malloc(sizeof(dNode));
@@ -73,11 +73,12 @@ int downloadtable_delnode(dNode* node){
 	else if(strcmp(tmp->name,node->name)==0&&tmp->size==node->size&&tmp->timestamp==node->timestamp){
 		dtable->file=tmp->pNext;
 		dtable->dfilenum--;
+		return 1;
 		free(tmp);
 	}
 	else{
 		while(next!=NULL){
-			if(strcmp(tmp->name,node->name)==0&&tmp->size==node->size&&tmp->timestamp==node->timestamp){
+			if(strcmp(next->name,node->name)==0&&next->size==node->size&&next->timestamp==node->timestamp){
 				tmp->pNext=next->pNext;
 				free(next);
 				dtable->dfilenum--;
@@ -115,7 +116,7 @@ void downloadtable_print(){
 int getdnodebyname(dNode* node){
 	dNode* tmp=dtable->file;
 	int i;
-	for(i=0;i<dtable->dfilenum;i++){
+	for(i=0;i<dtable->dfilenum-1;i++){
 		if(strcmp(node->name,tmp->name)==0){
 			node->size=tmp->size;
 			node->timestamp=tmp->timestamp;
@@ -131,6 +132,6 @@ int dtable_empty(){
 	if(tmp==NULL){
 		return 1;
 	}
-	return -1;
+	return 0;
 }
 
