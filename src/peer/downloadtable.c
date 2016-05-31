@@ -116,7 +116,7 @@ void downloadtable_print(){
 int getdnodebyname(dNode* node){
 	dNode* tmp=dtable->file;
 	int i;
-	for(i=0;i<dtable->dfilenum-1;i++){
+	for(i=0;i<dtable->dfilenum;i++){
 		if(strcmp(node->name,tmp->name)==0){
 			node->size=tmp->size;
 			node->timestamp=tmp->timestamp;
