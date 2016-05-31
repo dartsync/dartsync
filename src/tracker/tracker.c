@@ -305,9 +305,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                 }
                 if(flag == 1 && curftable->peernum < MAX_PEER_NUM){
                     curftable->peerip[curftable->peernum] = recvseg->peer_ip;
-                    pthread_mutex_lock(peer_tb_mutex);
                     curftable->peer_type[curftable->peernum] = peer_table_get_type(peer_tb,recvseg->peer_ip);
-                    pthread_mutex_unlock(peer_tb_mutex);
                     curftable->peernum++;
                     change = 1;
                 }
