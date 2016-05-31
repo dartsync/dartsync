@@ -14,6 +14,8 @@ char tracker_host_name[100];
 #include "../peer/p2p.h"
 #include "../network/network_utils.h"
 #include "../utils/constants.h"
+#include "downloadtable.h"
+
 //#include "filetable.h"
 
 char dirname[128];
@@ -21,6 +23,8 @@ int heartbeat_interval;
 int piece_len;
 int network_conn=-1;
 peer_file_table *filetable;
+//download_table *downloadtable;
+
 //peer_peer_table *peertable;
 
 
@@ -28,6 +32,7 @@ int connectToTracker(){
   int out_conn;
   struct sockaddr_in servaddr;
   servaddr.sin_family =AF_INET;
+  //servaddr.sin_addr.s_addr= inet_addr("129.170.214.100");
   servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
   servaddr.sin_port = htons(TRACKER_PORT);
   out_conn = socket(AF_INET,SOCK_STREAM,6);
@@ -37,7 +42,8 @@ int connectToTracker(){
 	return -1;
   }
   if(connect(out_conn, (struct sockaddr*)&servaddr, sizeof(servaddr))<0){
-	printf("connect to tracker: error cnnecting to trcker \n");
+  	perror("connect to trackerfail: ");
+	printf("\n");
 	return -1;
   }
   printf("Send register pkg \n");
@@ -59,6 +65,7 @@ int connectToTracker(){
 int send_registion(int out_conn){
   int ret;
   ptt_seg_t* sendseg=(ptt_seg_t*)malloc(sizeof(ptt_seg_t));
+  memset(sendseg,0,sizeof(ptt_seg_t));
   sendseg->protocol_len=sizeof(ptt_seg_t);
 //  sendseg->protocol_name=;
   sendseg->type=REGISTER;
@@ -85,12 +92,14 @@ int send_filetable(){
 	sendseg->peer_ip=getmyip();
 //	sendseg->port=;
 	
-	peer_file_table *sendftable;
-	sendftable=filetable_init(dirname);
+	//peer_file_table *sendftable;
+	//sendftable=filetable_init(dirname);
 
-	sendseg->file_table_size=sendftable->filenum;
-	int fnum=sendftable->filenum;
-	Node* sendfnode=sendftable->file;
+	//sendftable=filetable;
+
+	sendseg->file_table_size=filetable->filenum;
+	int fnum=filetable->filenum;
+	Node* sendfnode=filetable->file;
 	printf("Sending filetable: filenum: %d\n",fnum);
 	int i=0;
 	for(i=0;i<fnum;i++){
@@ -99,19 +108,19 @@ int send_filetable(){
 	}
 	int retnum;
 	retnum=peer_sendseg(network_conn, sendseg);
-	filetable_destroy(sendftable);
+	//filetable_destroy(sendftable);
 	return retnum;
 }
 
 int peer_update_filetable(Node* recv,int recvnum){
 
-	peer_file_table *curftable;
-	curftable=filetable_init(dirname);
+	//peer_file_table *curftable;
+	//curftable=filetable_init(dirname);
 
-	int curnum=curftable->filenum;
+	int curnum=filetable->filenum;
 	int num=0;
 	Node* recvfpt=recv;
-	Node* curfpt=curftable->file	;
+	Node* curfpt=filetable->file	;
 	printf("in peer_update_filetable: block update\n");
 	//blockUpdate();
 	Node* tmp=recv;
@@ -176,7 +185,7 @@ int peer_update_filetable(Node* recv,int recvnum){
 	}
 	printf("unblock update\n");
 	//unblockUpdate();
-	filetable_destroy(curftable);
+	//filetable_destroy(curftable);
 }
 
 
@@ -283,13 +292,14 @@ void merge_temp_file(FILE *main_file, FILE *temp_file){
 	printf("merging temp file finished\n");
 }
 void *file_download_handler(void *file_info){
-	blockUpdate();
+	//blockUpdate();
 	char filename[256];
 	Node* file_node = (Node *) file_info;
 	sprintf(filename,"%s/%s",dirname,file_node->name);
 
 	if(file_node){
 		int chunks = (file_node->size > file_node->peernum) ? file_node->peernum : file_node->size ;
+		//chunks = 1;
 		if(chunks > 0){
 			printf("chunks available = %d \n",chunks);
 			temp_download_t multi_threads[chunks] ;
@@ -319,17 +329,37 @@ void *file_download_handler(void *file_info){
 				fclose(main_file);
 			}
 			printf("merge file success \n");
-			
+		}else if(file_node->size == 0 && file_node->peernum != 0){
+			//download it from a peer
+		}else{
+			//tell tracker that none have the file
+			// will not use I think
 		}
 	}
-	unblockUpdate();
-	send_filetable();
+	/*printf("remove node from download table,add to filetable\n");
+	dNode dfile;
+	memset(&dfile,0,sizeof(dNode));
+	memcpy(dfile.name,file_node->name,strlen(file_node->name));
+	dfile.size=file_node->size;
+	dfile.timestamp=file_node->timestamp;
+	downloadtable_delnode(&dfile);
+	filetable_addnode(filetable, dfile.size, dfile.name, dfile.timestamp);*/
+	//unblockUpdate();
+	//send_filetable();
 	pthread_exit(NULL);
 	return NULL ;
 }
 
 int download_file(Node* file_node){
 	printf(" in download file \n");
+	downloadtable_print();
+	dNode dfile;
+	memset(&dfile,0,sizeof(dNode));
+	memcpy(dfile.name,file_node->name,strlen(file_node->name));
+	dfile.size=file_node->size;
+	dfile.timestamp=file_node->timestamp;
+	downloadtable_addnode(&dfile);
+	downloadtable_print();
 	if(file_node){
 		pthread_t peer_download_thread;
 		pthread_create(&peer_download_thread,NULL,file_download_handler,(void*)file_node);
@@ -348,7 +378,8 @@ void* heartbeat(){
 	while(1){
 		//sleep(HEARTBEAT_INTERVAL);
 		select(0,0,0,0,&(struct timeval){.tv_usec = heartbeat_interval * 1000000 * 0.9});		
-		ptt_seg_t* sendseg=(ptt_seg_t*)malloc(sizeof(ptt_seg_t)); 
+		ptt_seg_t* sendseg=(ptt_seg_t*)malloc(sizeof(ptt_seg_t));
+		memset(sendseg,0,sizeof(ptt_seg_t));
 //		sendseg->protocol_len=;
 //		sendseg->protocol_name=;
 		sendseg->type=KEEP_ALIVE;
@@ -365,6 +396,7 @@ void* heartbeat(){
 void peer_stop(){
 	close(network_conn);
 	filetable_destroy(filetable);
+	downloadtable_destroy();
 	printf("Peer stop!\n");
 	exit(0);
 }
@@ -385,7 +417,10 @@ void *file_upload_request_handler(){
 		if(new_connection > 0){
 			// create a new thread for the upload handler and
 			pthread_t upload_handler_thread;
-			pthread_create(&upload_handler_thread,NULL,p2p_upload,(void*)&new_connection);
+            int* connew = (int*) malloc(sizeof(int));
+            *connew = new_connection;
+            
+			pthread_create(&upload_handler_thread,NULL,p2p_upload,(void*)connew);
 		}else{
 			printf("Error in accepting new upload request\n");
 		}
@@ -445,6 +480,7 @@ void start_peer(char *argv[]){
 	printf("Get sync dir: %s\n",dirname);
 
 	filetable=filetable_init(dirname);
+	downloadtable_create();
 	filetable_print(filetable);
 	//peertable=peertable_init();
 	

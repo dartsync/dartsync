@@ -1,14 +1,21 @@
+#include <arpa/inet.h>          // inet_ntoa
+#include <signal.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <time.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
-#include <errno.h>
-#include <unistd.h>
-#include <sys/types.h>
+#include <sys/sendfile.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/inotify.h>
-#include <arpa/inet.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+#include <netdb.h>
 #include "../utils/filetable.h"
 #include "peer.h"
 
@@ -22,6 +29,11 @@ int size; // Size of the file
 unsigned int lastModifyTime;// time stamp of last modification
 } FileInfo;
 
+typedef struct moniterlist{
+char dirpath[1024]; // Path of the file
+int wd; // Size of the file
+struct moniterlist *pNext;
+} dirlist;
 
 int watchDirectory(peer_file_table* ptable,char* directory);
 int readConfigFile( char* filename ); //Read config file from disk.

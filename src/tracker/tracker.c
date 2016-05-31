@@ -135,7 +135,7 @@ void *listen_handshake_platform(void* arg){
                 printf("sending :- %s",buffer);
                 //send(conn,"hello\n",7,0);
                 if (send(conn,buffer,256,0) < 0) {
-                	printf("Tracker send seg error\n");
+                    printf("Tracker send seg error\n");
                 }
     		}
     		break;
@@ -173,7 +173,7 @@ void *listen_handshake_platform(void* arg){
     	}
     }
     fflush(stdout);
-	return NULL;
+    return NULL;
 }
 void* listen_handshake(void* arg){
     int conn = *((int*)arg);
@@ -210,7 +210,7 @@ void* listen_handshake(void* arg){
                 break;
                 
             case FILE_UPDATE:
-                printf("received file update package\n");
+                printf("received file update package from: %d\n",conn);
                 pthread_mutex_lock(peer_tb_mutex);
                 pthread_mutex_lock(file_tb_mutex);
                 if(peer_table_update_timestamp(peer_tb, conn) > 0){
@@ -294,7 +294,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
     
     for(i = 0; i < num; i++){
         if(curftable != NULL && strcmp(head[i].name, curftable->name) == 0){
-	printf("compare node in list %s\n", head[i].name);
+    printf("compare node in list %s", head[i].name);
             if(curftable->size == head[i].size && curftable->timestamp == head[i].timestamp){
                 int flag = 1;
                 for(int i = 0; i < curftable->peernum; i++){
@@ -307,19 +307,22 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                     curftable->peerip[curftable->peernum] = recvseg->peer_ip;
                     curftable->peer_type[curftable->peernum] = peer_table_get_type(peer_tb,recvseg->peer_ip);
                     curftable->peernum++;
-                    change = 1;
+                    // change = 1;
                 }
+		printf(" size and time stamp didn't change\n");
             }else{
                 curftable->size = head[i].size;
                 curftable->timestamp = head[i].timestamp;
                 curftable->peerip[0] = recvseg->peer_ip;
                 curftable->peernum = 1;
                 change = 1;
+		printf(" size and time stamp change\n");
             }
+		printf("The size is %d, the time stamp is: %d\n", head[i].size, head[i].timestamp);
             prev = curftable;
             curftable = curftable->pNext;
         }else if(curftable != NULL && strcmp(head[i].name, curftable->name) < 0){
-		printf("add node in list %s\n", head[i].name);
+        printf("add node in list %s\n", head[i].name);
             Node *t = (Node*) malloc(sizeof(Node));
             memset(t, 0, sizeof(Node));
             t->size = head[i].size;
@@ -341,7 +344,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
             file_tb->filenum++;
             
         }else if(curftable != NULL && strcmp(head[i].name, curftable->name) > 0){
-		printf("delete node in list %s\n", head[i].name);
+        printf("delete node in list %s\n", head[i].name);
             Node *t = curftable;
             if(prev == NULL){
                 file_tb->file = file_tb->file->pNext;
@@ -354,9 +357,9 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
             }
             change = 1;
             file_tb->filenum--;
-	    i--;
+        i--;
         }else{
-		printf("add node at last position %s\n", head[i].name);
+        printf("add node at last position %s\n", head[i].name);
             Node *t = (Node*) malloc(sizeof(Node));
             memset(t, 0, sizeof(Node));
             t->size = head[i].size;
@@ -378,17 +381,17 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
     
     while(curftable != NULL){
 printf("delete node last remain nodes %s\n",  curftable->name);
-	if(prev == NULL){
-		Node *t = curftable;
-		curftable = curftable->pNext;
-		file_tb->file = NULL;
-		free(t);
-	}else{
-		prev->pNext = NULL;
-        	Node *t = curftable;
-        	curftable = curftable->pNext;
-        	free(t);
-	}
+    if(prev == NULL){
+        Node *t = curftable;
+        curftable = curftable->pNext;
+        file_tb->file = NULL;
+        free(t);
+    }else{
+        prev->pNext = NULL;
+            Node *t = curftable;
+            curftable = curftable->pNext;
+            free(t);
+    }
         change = 1;
         file_tb->filenum--;
     }
