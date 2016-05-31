@@ -508,7 +508,7 @@ void start_peer(char *argv[]){
 		 * starting thread for listening to upload request from java clients
 		 */
 	pthread_t file_upload_thread_diff ;
-	pthread_create(&file_upload_thread_diff,NULL,file_upload_request_handler, NULL);
+	pthread_create(&file_upload_thread_diff,NULL,file_upload_request_handler_diff, NULL);
 
 	while(1){
 		// keep receving message from tracker
