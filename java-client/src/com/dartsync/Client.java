@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
 import com.dartsync.FileMonitor.FileMonitorListener;
@@ -100,7 +101,9 @@ public class Client implements FileMonitorListener{
 			System.out.println("Tracker not available ");
 		}
 	}
-	
+	public static final int getLocalIp() throws UnknownHostException{
+		return ByteBuffer.wrap(InetAddress.getLocalHost().getAddress()).getInt();
+	}
 	public static TrackerInfo connectToTracker(String trackerAddress){
 		TrackerInfo info = null;
 		try{
@@ -112,7 +115,6 @@ public class Client implements FileMonitorListener{
 			segment.peer_ip = ByteBuffer.wrap(InetAddress.getLocalHost().getAddress()).getInt();
 			segment.protocolLength = 126;
 			segment.type = Constants.SIGNAL_REGISTER;
-			segment.file_table_size = 0;
 			String sendMsg = segment.getTCPString();
 			pw.println(sendMsg);
 			String recvMessage = br.readLine();
@@ -137,9 +139,9 @@ public class Client implements FileMonitorListener{
 	}
 	
 	public void startClient(){
-		fileMonitor = new FileMonitor(rootDir, null, this);
+		fileMonitor = new FileMonitor(rootDir, trackerInfo, this);
 		fileMonitor.start();
-		heartBeatThread = new HeartBeat(trackerInfo.socket,trackerInfo.heartBeatInterval);
+		heartBeatThread = new HeartBeat(trackerInfo,trackerInfo.heartBeatInterval);
 		heartBeatThread.start();
 		fileUploadThread = new FileUploader(rootDir);
 		fileUploadThread.start();

@@ -13,10 +13,10 @@ import java.net.Socket;
  */
 public class HeartBeat extends Thread {
 	
-	private Socket trackerSocket = null;
+	private TrackerInfo trackerSocket = null;
 	private int interval ;
 	
-	public HeartBeat(Socket tracerSocket, int interval){
+	public HeartBeat(TrackerInfo tracerSocket, int interval){
 		this.interval = interval;
 		this.trackerSocket = tracerSocket;
 	}
@@ -24,9 +24,9 @@ public class HeartBeat extends Thread {
 	@Override
 	public void run() {
 		try{
-			while(trackerSocket != null && trackerSocket.isConnected()){
+			while(trackerSocket.getSocket() != null && trackerSocket.getSocket().isConnected()){
 				//System.out.println("heartbeat thread sleeping");
-				Thread.sleep(interval);
+				Thread.sleep(interval * 1000);
 				sendHeartBeat();
 			}
 		}catch(InterruptedException ex){
@@ -41,7 +41,8 @@ public class HeartBeat extends Thread {
 	private void sendHeartBeat() throws IOException {
 		SegmentPeer segment = new SegmentPeer();
 		segment.type = Constants.SIGNAL_HEART_BEAT;
-		PrintWriter pw = new PrintWriter(trackerSocket.getOutputStream(),true);
+		segment.peer_ip = Client.getLocalIp();
+		PrintWriter pw = new PrintWriter(trackerSocket.getSocket().getOutputStream(),true);
 		pw.println(segment.getTCPString());
 		//System.out.println("heartbeat sent");
 	}

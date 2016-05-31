@@ -74,18 +74,47 @@ int parser_ptt_seg(char *buffer, char *delimiter,ptt_seg_t *seg){
 	 * 4. file table size
 	 */
 	token = strtok(buffer,delimiter) ;
-	printf("%s\n",token);
+	printf("1st = %s\n",token);
 	if(token == NULL) return FALSE;
 	seg->type = atoi(token);
 	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
-	printf("%s\n",token);
+	printf("2nd = %s\n",token);
 	seg->protocol_len = atoi(token);
 	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
-	printf("%s\n",token);
+	printf("3rd = %s\n",token);
 	seg->peer_ip = atoi(token);
 	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
-	printf("%s\n",token);
+	printf("4th = %s\n",token);
 	seg->file_table_size = atoi(token);
+	if(seg->type == FILE_UPDATE){
+		printf("filetable found = %s\n", token);
+		for(int i = 0 ; i < seg->file_table_size ; i++){
+			Node *node = (Node *) malloc(sizeof(Node));
+			// file name
+			if((token = strtok(NULL,delimiter)) == NULL){
+				free(node);
+				return FALSE ;
+			}
+			memcpy(node->name,token,256);
+			printf("filename = %s\n",node->name);
+			// file file size
+			if((token = strtok(NULL,delimiter)) == NULL){
+				free(node);
+				return FALSE ;
+			}
+			node->size = atoi(token);
+			printf("filesize = %d\n",node->size);
+			// file timestamp
+			if((token = strtok(NULL,delimiter)) == NULL){
+				free(node);
+				return FALSE ;
+			}
+			node->timestamp = atoi(token);
+			printf("file time = %d\n",node->timestamp);
+			seg->file_table[i] = *node;
+		}
+
+	}
 	return TRUE;
 }
 
@@ -96,7 +125,7 @@ void *listen_handshake_platform(void* arg){
     ptt_seg_t pkt;
     //bzero(&pkt,sizeof(ptt_seg_t));
     while(recv(conn,buffer,256,0)>0){
-    	printf("%s",buffer);
+    	printf("%s\n",buffer);
     	parser_ptt_seg(buffer,",",&pkt);
     	switch(pkt.type){
     		case REGISTER:{
@@ -111,9 +140,33 @@ void *listen_handshake_platform(void* arg){
     		}
     		break;
     		case KEEP_ALIVE:{
-    			printf("received keep alive packet DIFF in socket: %d\n",conn);
+    			printf("keep alive packet DIFF in socket: %d, t = %d, pl = %d, ip = %d, fs = %d \n",conn, pkt.type, pkt.protocol_len, pkt.peer_ip, pkt.file_table_size);
 				pthread_mutex_lock(peer_tb_mutex);
 				peer_table_update_timestamp(peer_tb, conn);
+				pthread_mutex_unlock(peer_tb_mutex);
+			}
+			break;
+    		case FILE_UPDATE:{
+    			printf("file update packet DIFF in socket: %d \n",conn);
+    			for(int i = 0 ; i < pkt.file_table_size ; i++){
+        			printf("file name = %s,size =  %d, time = %d \n",pkt.file_table[i].name,pkt.file_table[i].size,pkt.file_table[i].timestamp);
+    			}
+				pthread_mutex_lock(peer_tb_mutex);
+				pthread_mutex_lock(file_tb_mutex);
+	               if(peer_table_update_timestamp(peer_tb, conn) > 0){
+	                    if(tracker_update_filetable(&pkt) > 0){
+	                        ttp_seg_t sendpkg;
+	                        printf("Filetalbe updated\n");
+	                        filetable_print(file_tb);
+	                        memset(&sendpkg, 0, sizeof(ttp_seg_t));
+	                        sendpkg.interval = HEARTBEAT_INTERVAL;
+	                        sendpkg.piece_len = PIECE_LENGTH;
+	                        if(broadcast_filetable(&sendpkg)<0){
+	                            printf("Send broadcast pkg error\n");
+	                        }
+	                    }
+	                }
+				pthread_mutex_unlock(file_tb_mutex);
 				pthread_mutex_unlock(peer_tb_mutex);
 			}
 			break;
@@ -252,6 +305,9 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                 }
                 if(flag == 1 && curftable->peernum < MAX_PEER_NUM){
                     curftable->peerip[curftable->peernum] = recvseg->peer_ip;
+                    pthread_mutex_lock(peer_tb_mutex);
+                    curftable->peer_type[curftable->peernum] = peer_table_get_type(peer_tb,recvseg->peer_ip);
+                    pthread_mutex_unlock(peer_tb_mutex);
                     curftable->peernum++;
                     change = 1;
                 }

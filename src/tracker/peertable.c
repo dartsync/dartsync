@@ -101,10 +101,21 @@ int peer_table_delete(peer_table *table, unsigned int ip_addr){
     return -1;
 }
 
+int peer_table_get_type(peer_table *table, unsigned int ip_address){
+    tracker_peer_t *p = table->head;
+    while(p != NULL){
+        if(p->ip == ip_address){
+            return p->peer_type;
+        }
+        p=p->next;
+    }
+    return PEER_TYPE_DEFAULT;
+}
+
 int peer_table_update_timestamp(peer_table *table, int conn){
     struct timeval currentTime;
     gettimeofday(&currentTime, NULL);
-    
+
     tracker_peer_t *p = table->head;
     while(p != NULL){
         if(p->sockfd == conn){

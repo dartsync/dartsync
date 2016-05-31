@@ -12,7 +12,7 @@ import java.net.Socket;
 public class TrackerInfo {
 	
 	public String trackerAddress = null;
-	public Socket socket = null;
+	private Socket socket = null;
 	public int heartBeatInterval = -1;
 	public int pieceLength = 0;
 	
@@ -23,5 +23,8 @@ public class TrackerInfo {
 		this.heartBeatInterval = heartBeatInterval;
 		this.pieceLength = pieceLength;
 	}
-
+	
+	public synchronized Socket getSocket(){
+		return socket;
+	}
 }

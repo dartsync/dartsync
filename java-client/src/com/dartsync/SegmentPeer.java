@@ -1,6 +1,9 @@
 package com.dartsync;
 
+import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class SegmentPeer {
@@ -19,9 +22,8 @@ public class SegmentPeer {
 	// listening port number in p2p
 	public int port; // 4
 	// the number of files in the local file table -- optional
-	public int file_table_size; // 4
 	// file table of the client -- your own design
-	public Node[] fileTable = new Node[Constants.MAX_FILE_NUM]; // 
+	public List<File> fileList = new ArrayList<>();
 	
 	public String getTCPString(){
 		/**
@@ -30,24 +32,15 @@ public class SegmentPeer {
 		 * 3. ip
 		 * 4. file table size
 		 */
-		return type+","+
-		 	   protocolLength+","+
-		 	   peer_ip+","+
-		 	   file_table_size;
+		StringBuilder resultBuffer  = new StringBuilder(type+","+ protocolLength+","+ peer_ip+","+ fileList.size());
+		if(fileList.size() > 0){
+			for(int i = 0 ; i < fileList.size() ; i++){
+				File file = fileList.get(i);
+				resultBuffer.append("," + file.getName() + "," + file.length() + "," + file.lastModified());
+			}
+		}
+		return resultBuffer.toString();
 	}
 	
-	public byte[] getBytes(){
-		
-		ByteBuffer buffer = ByteBuffer.allocate(MAX_BUFFER_SIZE);
-		buffer.putInt(protocolLength);
-		buffer.put(new String(protocolName).getBytes());
-		buffer.putInt(type);
-		buffer.put(new String(reserved).getBytes());
-		buffer.putInt(peer_ip);
-		buffer.putInt(port);
-		buffer.putInt(file_table_size);
-		return buffer.array();
-		
-	}
 	
 }

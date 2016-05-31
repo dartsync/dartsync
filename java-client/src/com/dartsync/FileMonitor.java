@@ -2,13 +2,15 @@ package com.dartsync;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.Socket;
+import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FileMonitor extends Thread {
 	
@@ -28,12 +30,14 @@ public class FileMonitor extends Thread {
 	
 	private File rootDir = null;
 	private FileMonitorListener mListener = null;
-	private Socket trackerSocket = null;
+	private TrackerInfo trackerSocket = null;
+	private List<File> fileList = null;
 	
-	public FileMonitor(File root, Socket trackerSocket, FileMonitorListener fileListener){
+	public FileMonitor(File root, TrackerInfo trackerSocket, FileMonitorListener fileListener){
 		this.trackerSocket = trackerSocket;
 		this.mListener = fileListener;
 		this.rootDir = root;
+		this.fileList = new ArrayList<File>();
 	}
 	
 	private void updateFileChanges(WatchEvent<?> event){
@@ -49,14 +53,36 @@ public class FileMonitor extends Thread {
             if(mListener != null){
             	mListener.onFileDeleted(pathDeleted.toFile());
             }
-            System.out.println("File deleted: " + pathDeleted);
+            //System.out.println("File deleted: " + pathDeleted);
+            onFileDeleted(pathDeleted.toFile());
         } else if (kind.equals(StandardWatchEventKinds.ENTRY_MODIFY)) {
             Path pathModified = (Path) event.context();
             if(mListener != null){
             	mListener.onFileUpdated(pathModified.toFile());
             }
-            System.out.println("File updated: "+ pathModified);
+            onFileUpdated(pathModified.toFile());
+            //System.out.println("File updated: "+ pathModified);
         }
+	}
+
+	public void onFileDeleted(File filePath) {
+		// TODO Auto-generated method stub
+		System.out.println("onFileDeleted");
+		
+	}
+
+	public void onFileUpdated(File filePath) {
+		System.out.println("onFileUpdated " + filePath.toString());
+		if(!fileList.contains(filePath) && isValidFile(filePath)){
+			fileList.add(filePath);
+			System.out.println("Added file to list :- " + filePath.getName());
+		}else{
+			System.out.println("Discarded file from adding to list :- " + filePath.getName());
+		}
+	}
+	
+	private boolean isValidFile(File filePath){
+		return !filePath.isDirectory() && !filePath.getName().startsWith(".") && !filePath.getName().endsWith("~");
 	}
 	
 	@Override
@@ -67,6 +93,10 @@ public class FileMonitor extends Thread {
 		WatchKey watchKey = null;
 
 		try {
+			updateExistingFiles();
+			if(fileList.size() > 0){
+				sendFileBroadCast();
+			}
 			watchService = path.getFileSystem().newWatchService();
 			path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
                     StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE);
@@ -95,6 +125,34 @@ public class FileMonitor extends Thread {
 		
 	}
 	
+	private void sendFileBroadCast() throws IOException {
+		System.out.println("Send file broadcast");
+		SegmentPeer peer = new SegmentPeer();
+		peer.type = Constants.SIGNAL_FILE_UPDATE;
+		peer.protocolLength = 0;
+		peer.peer_ip = Client.getLocalIp();
+		peer.fileList.addAll(fileList);
+		String tcpString = peer.getTCPString();
+		System.out.println("File update = " + tcpString);	
+		System.out.println("Sending to socket");
+		PrintWriter pw = new PrintWriter(trackerSocket.getSocket().getOutputStream(), true);
+		pw.println(tcpString);
+		System.out.println("sent to socket");
+	}
+
+	private void updateExistingFiles() {
+		File[] files = rootDir.listFiles();
+		if(files != null ){
+			for (File file : files) {
+				if(!fileList.contains(file) && isValidFile(file)){
+					System.out.println("Already Exisitng :- " + file.getName());
+					fileList.add(file);
+				}
+			}
+		}
+		
+	}
+
 	private void releaseWatch(WatchKey key, WatchService service) {
 		try {
 			if (key != null) {

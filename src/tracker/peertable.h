@@ -54,4 +54,6 @@ int peer_table_update_timestamp(peer_table *table, int conn);
 
 void peer_table_print(peer_table *table);
 
+int peer_table_get_type(peer_table *table, unsigned int ip_address);
+
 #endif /* peertable_h */
