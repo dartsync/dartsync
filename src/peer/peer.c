@@ -33,7 +33,7 @@ int connectToTracker(){
   struct sockaddr_in servaddr;
   servaddr.sin_family =AF_INET;
   //servaddr.sin_addr.s_addr= inet_addr("129.170.214.100");
-  servaddr.sin_addr.s_addr= inet_addr("129.170.212.20");
+  servaddr.sin_addr.s_addr= inet_addr("129.170.212.204");
   servaddr.sin_port = htons(TRACKER_PORT);
   out_conn = socket(AF_INET,SOCK_STREAM,6);
 
