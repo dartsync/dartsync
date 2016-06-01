@@ -141,9 +141,9 @@ public class FileMonitor extends Thread {
 
 		try {
 			updateExistingFiles();
-			if(trackerInfo.getFileList().size() > 0){
-				sendFileBroadCast();
-			}
+//			if(trackerInfo.getFileList().size() > 0){
+//				sendFileBroadCast();
+//			}
 			watchService = path.getFileSystem().newWatchService();
 			path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
                     StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE);

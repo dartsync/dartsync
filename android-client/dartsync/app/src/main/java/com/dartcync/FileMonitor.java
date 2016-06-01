@@ -123,9 +123,9 @@ public class FileMonitor {
 				}
 			}
 		}
-		if(trackerInfo.getFileList().size() > 0){
-			sendFileBroadCast();
-		}
+//		if(trackerInfo.getFileList().size() > 0){
+//			sendFileBroadCast();
+//		}
 	}
 	
 }
