@@ -235,10 +235,10 @@ void filetable_print(peer_file_table* ptable){
 }
 
 unsigned long getmyip(){
-	char hostname[100];
+//	char hostname[100];
 //	hostname[99]="\0";
-	//char* hostname="129.170.212.204";
-	gethostname(hostname,sizeof(hostname)); // get the ip address of local machine
+	char* hostname="129.170.212.204";
+	//gethostname(hostname,sizeof(hostname)); // get the ip address of local machine
 	struct hostent *hostInfo;
   	hostInfo = gethostbyname(hostname);
   	if(!hostInfo) {
