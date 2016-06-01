@@ -100,6 +100,17 @@ int get_client_socket_fd_ip(unsigned int ip_address, int portNumber){
 	printf("requesting connection from ip :- %s and port %d \n" , ip, portNumber);
 	return get_client_socket_fd(ip,portNumber);
 }
+int get_client_socket_fd_ip_diff(unsigned int ip_address, int portNumber){
+	fflush(stdout);
+	printf("get_client_socket_fd_ip \n");
+	struct sockaddr_in server_addr;
+    bzero(&server_addr, sizeof(struct sockaddr_in));
+	struct in_addr in;
+	in.s_addr = htonl((unsigned int)ip_address);
+	char* ip = inet_ntoa(in);
+	printf("requesting connection from ip :- %s and port %d \n" , ip, portNumber);
+	return get_client_socket_fd(ip,portNumber);
+}
 
 unsigned long get_my_ip(){
 	char hostname[100];
