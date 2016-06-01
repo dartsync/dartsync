@@ -167,21 +167,20 @@ int peer_update_filetable(Node* recv,int recvnum){
 			curfpt=curfpt->pNext;
 		}
 		else{
-			if(recvnode->size!=curfpt->size||recvnode->timestamp!=curfpt->timestamp){
-				// tracker and peer both have this file, but peer side file need to be updated
-				if(recvnode->name[strlen(recvnode->name)-1]!='/'){
-					printf("Find motified : %s\n",recvnode->name);
-					remove(recvnode->name);
-					download_file(recvnode);
-					num++;
-					curfpt=curfpt->pNext;
+			if(recvnode->name[strlen(recvnode->name)-1]!='/'){
+				if(recvnode->size!=curfpt->size||recvnode->timestamp!=curfpt->timestamp){
+					// tracker and peer both have this file, but peer side file need to be updated
+					if(recvnode->name[strlen(recvnode->name)-1]!='/'){
+						printf("Find motified : %s\n",recvnode->name);
+						remove(recvnode->name);
+						download_file(recvnode);
+						num++;
+						curfpt=curfpt->pNext;
+					}
 				}
 			}
-			else if(recvnode->peernum){
-				num++;
-				curfpt=curfpt->pNext;
-			}
-			else{
+		else{
+				printf("In here\n");
 				num++;
 				curfpt=curfpt->pNext;
 			}

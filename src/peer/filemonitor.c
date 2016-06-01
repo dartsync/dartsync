@@ -17,13 +17,14 @@ void* update_filetable(){
         struct timeval currentTime;
         gettimeofday(&currentTime, NULL);
         unsigned long int curtime = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
-        //printf("mtime: %u updated: %d",mtime,updated);
+        //printf("mtime: %u updated: %d \n",mtime,updated);
         pthread_mutex_lock(update_mutex);
-        if(curtime - mtime > 3 * 1000000 && updated>0 && dtable_empty()){
+        if(curtime - mtime > 5 * 1000000 && updated>0 && dtable_empty()){
             send_filetable();
             updated=0;
         }
         pthread_mutex_unlock(update_mutex);
+        sleep(1);
     }
 }
 
@@ -50,6 +51,7 @@ int watchDirectory(peer_file_table* ptable,char* directory){
     if(fd<0){
         printf("filemonitor: Fail to initialize inotify\n");
     }
+    addwatch(fd,NULL);
 
     struct timeval currentTime;
     gettimeofday(&currentTime, NULL);
@@ -58,7 +60,6 @@ int watchDirectory(peer_file_table* ptable,char* directory){
     pthread_t ftable_update_thread;
     pthread_create(&ftable_update_thread,NULL,update_filetable,NULL);
     
-    addwatch(fd,NULL);
      while(1){
          numRead=read(fd, buf, EVENT_BUF_LEN);
          struct timeval cTime;
