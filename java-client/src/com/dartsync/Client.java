@@ -22,7 +22,7 @@ import com.dartsync.FileMonitor.FileMonitorListener;
  */
 public class Client implements FileMonitorListener{
 	
-	public static final String TRACKER_ADDRESS = "localhost";
+	public static final String TRACKER_ADDRESS = "tahoe.cs.dartmouth.edu";
 	
 	private Thread heartBeatThread = null;
 	private Thread fileMonitor = null;
