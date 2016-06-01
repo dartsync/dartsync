@@ -52,7 +52,7 @@ int connectToTracker(){
   struct sockaddr_in servaddr;
   servaddr.sin_family =AF_INET;
   //servaddr.sin_addr.s_addr= inet_addr("129.170.214.100");
-  servaddr.sin_addr.s_addr= inet_addr("129.170.212.204");
+  servaddr.sin_addr.s_addr= inet_addr("129.170.212.139");
   servaddr.sin_port = htons(TRACKER_PORT);
   out_conn = socket(AF_INET,SOCK_STREAM,6);
 
@@ -188,10 +188,20 @@ int peer_update_filetable(Node* recv,int recvnum){
 			}
 			else{
 				char tmppath[256];
+				char tmppath2[256];
 				memset(tmppath,0,256);
+				memset(tmppath2,0,256);
 				int i=1;
 				int j;
 				Node* tmp=curfpt->pNext;
+				for(j=0;j<strlen(curfpt->name);j++){
+					if(curfpt->name[j]=='/'){
+						tmppath2[j]='/';
+						tmppath2[j+1]='\0';
+						break;
+					}
+					tmppath2[j]=curfpt->name[j];
+				}
 				for(j=0;j<strlen(tmp->name);j++){
 					if(tmp->name[j]=='/'){
 						tmppath[j]='/';
@@ -200,7 +210,7 @@ int peer_update_filetable(Node* recv,int recvnum){
 					}
 					tmppath[j]=tmp->name[j];
 				}
-				while(tmp!=NULL&&strcmp(curfpt->name,tmppath)==0){
+				while(tmp!=NULL&&strcmp(tmppath2,tmppath)==0){
 					memset(tmppath,0,256);
 					for(j=0;j<strlen(tmp->name);j++){
 						if(tmp->name[j]=='/'){
@@ -292,10 +302,20 @@ int peer_update_filetable(Node* recv,int recvnum){
 			}
 			else{
 				char tmppath[256];
+				char tmppath2[256];
 				memset(tmppath,0,256);
+				memset(tmppath2,0,256);
 				int i=1;
 				int j;
 				Node* tmp=curfpt->pNext;
+				for(j=0;j<strlen(curfpt->name);j++){
+					if(curfpt->name[j]=='/'){
+						tmppath2[j]='/';
+						tmppath2[j+1]='\0';
+						break;
+					}
+					tmppath2[j]=curfpt->name[j];
+				}
 				for(j=0;j<strlen(tmp->name);j++){
 					if(tmp->name[j]=='/'){
 						tmppath[j]='/';
@@ -304,7 +324,7 @@ int peer_update_filetable(Node* recv,int recvnum){
 					}
 					tmppath[j]=tmp->name[j];
 				}
-				while(tmp!=NULL&&strcmp(curfpt->name,tmppath)==0){
+				while(tmp!=NULL&&strcmp(tmppath2,tmppath)==0){
 					memset(tmppath,0,256);
 					for(j=0;j<strlen(tmp->name);j++){
 						if(tmp->name[j]=='/'){

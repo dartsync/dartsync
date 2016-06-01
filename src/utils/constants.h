@@ -11,18 +11,18 @@
 #define FALSE 0
 
 /*port to which peer connect to tracker*/
-#define TRACKER_PORT 5977
+#define TRACKER_PORT 4877
 
 /*port to which peer should connect when uploading to other peer*/
-#define PEER_UPLOAD_PORT 5978
+#define PEER_UPLOAD_PORT 4878
 
 /*port to which peer should connect when downloading to other peer*/
 
-#define PEER_DOWNLOAD_PORT 5979
+#define PEER_DOWNLOAD_PORT 4879
 
-#define TRACKER_PORT_DIFFERENT 5980
+#define TRACKER_PORT_DIFFERENT 4880
 
-#define PEER_DOWNLOAD_PORT_DIFFERENT 5981
+#define PEER_DOWNLOAD_PORT_DIFFERENT 4881
 
 
 #define TIMEOUT_SOCKET 5
