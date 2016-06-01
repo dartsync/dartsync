@@ -241,12 +241,12 @@ typedef struct download_seg{
 } peerdownload_seg;
  */
 void append_down_header(peerdownload_seg *node, char *body){
-	sprintf(body,"%s,",body,node->seg.file_name);
+	sprintf(body,"%s,",node->seg.file_name);
 	sprintf(body,"%s%d,",body,node->seg.start_idx);
 	sprintf(body,"%s%d\n",body,node->seg.piece_len);
 }
 void *download_chunk_diff(void *download_info){
-	printf("downloading chunk server port = %d\n",PEER_DOWNLOAD_PORT);
+	printf("downloading chunk server port = %d\n",PEER_DOWNLOAD_PORT_DIFFERENT);
 	fflush(stdout);
 	char header[256];
 	bzero(header,256);

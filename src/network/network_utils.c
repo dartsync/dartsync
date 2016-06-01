@@ -89,38 +89,10 @@ int get_client_socket_fd_ip(unsigned int ip_address, int portNumber){
 	struct sockaddr_in server_addr;
     bzero(&server_addr, sizeof(struct sockaddr_in));
 	struct in_addr in;
-	in.s_addr = (unsigned int)ip_address;
-	int socketFD = socket(AF_INET, SOCK_STREAM, 0);
-	printf("socket allocated \n");
-	if(socketFD < 0 ){
-		printf("Error in creating a new socket\n");
-		return socketFD;
-	 }
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(portNumber);
+	in.s_addr = htonl((unsigned int)ip_address);
 	char* ip = inet_ntoa(in);
-	if (inet_aton(ip, &server_addr.sin_addr) == 0)  {
-		printf("create_client_socket(): Server IP address error!\n");
-		return -1;
-	}
-	printf("requesting connection ...\n");
-	struct timeval timeout;
-	    timeout.tv_sec = TIMEOUT_SOCKET;
-	    timeout.tv_usec = 0;
-	if (setsockopt (socketFD, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0){
-		printf("setsockopt failed\n");
-	}
-	if (setsockopt (socketFD, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,sizeof(timeout)) < 0){
-		printf("setsockopt failed\n");
-	}
-	if(connect(socketFD,(struct sockaddr *)&server_addr,sizeof(server_addr)) < 0){
-		perror("Connection fail");
-		printf("connection failed to %u \n",ip_address);
-		close(socketFD);
-		return -1;
-	}
-	fflush(stdout);
-	return socketFD;
+	printf("requesting connection from ip :- %s and port %d \n" , ip, portNumber);
+	return get_client_socket_fd(ip,portNumber);
 }
 
 unsigned long get_my_ip(){
