@@ -30,7 +30,8 @@ public class FileUploader extends Thread {
 		ServerSocket serverSocket;
 		try {
 			serverSocket = new ServerSocket(Constants.PORT_PEER_DOWNLOAD);
-			System.out.println("File uploader started .. waiting for connection");
+			System.out.println("File uploader started .. waiting for connection on IP = " + Client.getLocalIp() + " and port = " + Constants.PORT_PEER_DOWNLOAD);
+			System.out.println(Client.getInetAddress(Client.getLocalIp()).toString());
 			final Socket clientSocket = serverSocket.accept();
 			System.out.println("Peer connected :- " + clientSocket.getInetAddress().getHostAddress());
 			new Thread(){
@@ -42,7 +43,7 @@ public class FileUploader extends Thread {
 						System.out.println("Error in uploading file :- ");
 					}
 				}
-			};
+			}.start();
 			
 		} catch (IOException e) {
 			System.out.println("Error in server socket");
@@ -63,7 +64,7 @@ public class FileUploader extends Thread {
 				String[] tokens = fileInfo.split(",");
 				if(tokens.length >= 3){
 					String fileName = tokens[0];
-					int offset = Integer.parseInt(tokens[0]);
+					int offset = Integer.parseInt(tokens[1]);
 					int pieceLength = Integer.parseInt(tokens[2]);
 					pieceLength  = (pieceLength > 0) ? pieceLength : Constants.PIECE_LENGTH;
 					File fileToUpload = new File(rootDir.getAbsolutePath() + "/" + fileName );

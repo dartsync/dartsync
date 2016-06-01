@@ -10,6 +10,8 @@ import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 
+import com.dartsync.TrackerInfo.FileInfo;
+
 public class FileMonitor extends Thread {
 	
 	public interface FileMonitorListener{
@@ -43,7 +45,7 @@ public class FileMonitor extends Thread {
             if(mListener != null){
             	mListener.onFileCreated(pathCreated.toFile());
             }
-            System.out.println("File created: " + pathCreated);
+            onFileCreated(pathCreated.toFile());
         } else if (kind.equals(StandardWatchEventKinds.ENTRY_DELETE)) {
             Path pathDeleted = (Path) event.context();
             if(mListener != null){
@@ -64,17 +66,50 @@ public class FileMonitor extends Thread {
 	public void onFileDeleted(File filePath) {
 		// TODO Auto-generated method stub
 		System.out.println("onFileDeleted");
+		if(isValidFile(filePath)){
+			if (trackerInfo.getFileTable().containsKey(filePath.getName())){
+				if( trackerInfo.getFileTable().get(filePath.getName()).fileStatus == TrackerInfo.FILE_STATUS_DELETED){
+					// this file is deleted due to a sync from tracker so we should not send update back to tracker
+					System.out.println("deleted File exists in file table :- " + filePath.getName());
+				}else{
+					System.out.println("A valid file deleted :- " + filePath.getName());
+					sendFileBroadCast();
+				}
+				trackerInfo.getFileTable().remove(filePath.getName());
+				trackerInfo.getFileList().remove(filePath);
+			}		
+		}
+	}
 		
+	public void onFileCreated(File filePath){
+		if(isValidFile(filePath)){
+			System.out.println("onFileCreated " + filePath.toString());
+		}else{
+			System.out.println("onFileCreated Discarded " + filePath.toString());
+		}
 	}
 
 	public void onFileUpdated(File filePath) {
 		System.out.println("onFileUpdated " + filePath.toString());
-		if(!trackerInfo.getFileList().contains(filePath) && isValidFile(filePath)){
-			trackerInfo.getFileList().add(filePath);
-			System.out.println("Added file to list :- " + filePath.getName());
-		}else{
-			System.out.println("Discarded file from adding to list :- " + filePath.getName());
+		if (isValidFile(filePath)) {
+			if (trackerInfo.getFileTable().containsKey(filePath.getName())) {
+				if (trackerInfo.getFileTable().get(filePath.getName()).fileStatus == TrackerInfo.FILE_STATUS_DOWNLOADED) {
+					sendFileBroadCast();
+				} else {
+					System.out.println("onFileUpdated downloading ... :- " + filePath.getName());
+				}
+			} else {
+				System.out.println("New file detected :- " + filePath.getName());
+				// this file should be added to file list as well as file table
+				// and update broadcast should be sent
+				trackerInfo.getFileList().add(filePath);
+				trackerInfo.getFileTable().put(filePath.getName(), new FileInfo(filePath, TrackerInfo.FILE_STATUS_DOWNLOADED));
+				sendFileBroadCast();
+			}
+		} else {
+			System.out.println("onFileUpdated Discarded " + filePath.toString());
 		}
+
 	}
 	
 	private boolean isValidFile(File filePath){
@@ -121,19 +156,23 @@ public class FileMonitor extends Thread {
 		
 	}
 	
-	private void sendFileBroadCast() throws IOException {
-		System.out.println("Send file broadcast");
-		SegmentPeer peer = new SegmentPeer();
-		peer.type = Constants.SIGNAL_FILE_UPDATE;
-		peer.protocolLength = 0;
-		peer.peer_ip = Client.getLocalIp();
-		peer.fileList.addAll(trackerInfo.getFileList());
-		String tcpString = peer.getTCPString();
-		System.out.println("File update = " + tcpString);	
-		System.out.println("Sending to socket");
-		PrintWriter pw = new PrintWriter(trackerInfo.getSocket().getOutputStream(), true);
-		pw.println(tcpString);
-		System.out.println("sent to socket");
+	private void sendFileBroadCast() {
+		try {
+			System.out.println("Send file broadcast");
+			SegmentPeer peer = new SegmentPeer();
+			peer.type = Constants.SIGNAL_FILE_UPDATE;
+			peer.protocolLength = 0;
+			peer.peer_ip = Client.getLocalIp();
+			peer.fileList.addAll(trackerInfo.getFileList());
+			String tcpString = peer.getTCPString();
+			System.out.println("File update = " + tcpString);
+			System.out.println("Sending to socket");
+			PrintWriter pw = new PrintWriter(trackerInfo.getSocket().getOutputStream(), true);
+			pw.println(tcpString);
+			System.out.println("sent to socket");
+		} catch (Exception ex) {
+			System.out.println("Error in sending file update :- " + ex.getMessage());
+		}
 	}
 
 	private void updateExistingFiles() {
@@ -143,6 +182,7 @@ public class FileMonitor extends Thread {
 				if(!trackerInfo.getFileList().contains(file) && isValidFile(file)){
 					System.out.println("Already Exisitng :- " + file.getName());
 					trackerInfo.getFileList().add(file);
+					trackerInfo.getFileTable().put(file.getName(), new FileInfo(file, TrackerInfo.FILE_STATUS_DOWNLOADED));
 				}
 			}
 		}

@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -21,7 +22,7 @@ import com.dartsync.FileMonitor.FileMonitorListener;
  */
 public class Client implements FileMonitorListener{
 	
-	public static final String TRACKER_ADDRESS = "localhost";
+	public static final String TRACKER_ADDRESS = "tahoe.cs.dartmouth.edu";
 	
 	private Thread heartBeatThread = null;
 	private Thread fileMonitor = null;
@@ -104,6 +105,12 @@ public class Client implements FileMonitorListener{
 	public static final int getLocalIp() throws UnknownHostException{
 		return ByteBuffer.wrap(InetAddress.getLocalHost().getAddress()).getInt();
 	}
+	
+	public static final InetAddress getInetAddress(int ipAddress) throws IOException {
+		byte[] bytes = BigInteger.valueOf(ipAddress).toByteArray();
+		return InetAddress.getByAddress(bytes);
+	}
+
 	public static TrackerInfo connectToTracker(String trackerAddress){
 		TrackerInfo info = null;
 		try{
@@ -145,7 +152,7 @@ public class Client implements FileMonitorListener{
 		heartBeatThread.start();
 		fileUploadThread = new FileUploader(rootDir);
 		fileUploadThread.start();
-		broadcastThread = new BroadcastThread(trackerInfo);
+		broadcastThread = new BroadcastThread(trackerInfo,rootDir);
 		broadcastThread.start();
 		try {
 			if(heartBeatThread != null && heartBeatThread.isAlive()) heartBeatThread.join();
