@@ -35,6 +35,8 @@ int file_table_size;
 char reserved[RESERVED_LEN];
 // file table of the client -- your own design
 Node file_table[MAX_FILE_NUM];
+
+int peer_type ;
 }ptt_seg_t;
 
 

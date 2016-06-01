@@ -154,6 +154,7 @@ void *listen_handshake_platform(void* arg){
 				pthread_mutex_lock(peer_tb_mutex);
 				pthread_mutex_lock(file_tb_mutex);
 	               if(peer_table_update_timestamp(peer_tb, conn) > 0){
+	            	   pkt.peer_type = PEER_TYPE_DIFFERENT;
 	                    if(tracker_update_filetable(&pkt) > 0){
 	                        ttp_seg_t sendpkg;
 	                        printf("Filetalbe updated\n");
@@ -213,6 +214,7 @@ void* listen_handshake(void* arg){
                 printf("received file update package from: %d\n",conn);
                 pthread_mutex_lock(peer_tb_mutex);
                 pthread_mutex_lock(file_tb_mutex);
+         	   pkt.peer_type = PEER_TYPE_DEFAULT;
                 if(peer_table_update_timestamp(peer_tb, conn) > 0){
                     if(tracker_update_filetable(&pkt) > 0){
                         printf("Filetalbe updated\n");
@@ -254,7 +256,9 @@ int broadcast_filetable(ttp_seg_t* sendpkg){
         memcpy(sendpkg->file_table+i,sendfnode,sizeof(Node));
         printf("name: %s\n",sendfnode->name);
         printf("timestamp: %lu\n",sendfnode->timestamp);
-        printf("IP: %d\n",sendfnode->peerip);
+        for(int j = 0 ; j < sendfnode->peernum; j++){
+        	 printf("IP: %d , Type: %d \n",sendfnode->peerip[j], sendfnode->peer_type[j]);
+        }
         append_node(sendfnode,buffer_diff);
         printf("after append buffer = %s\n",buffer_diff);
         if(i < fnum - 1)
@@ -305,7 +309,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                 }
                 if(flag == 1 && curftable->peernum < MAX_PEER_NUM){
                     curftable->peerip[curftable->peernum] = recvseg->peer_ip;
-                    curftable->peer_type[curftable->peernum] = peer_table_get_type(peer_tb,recvseg->peer_ip);
+                    curftable->peer_type[curftable->peernum] = recvseg->peer_type;
                     curftable->peernum++;
                     // change = 1;
                 }
@@ -314,7 +318,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                 curftable->size = head[i].size;
                 curftable->timestamp = head[i].timestamp;
                 curftable->peerip[0] = recvseg->peer_ip;
-                curftable->peer_type[0] = peer_table_get_type(peer_tb,recvseg->peer_ip);
+                curftable->peer_type[0] = recvseg->peer_type;// peer_table_get_type(peer_tb,recvseg->peer_ip);
                 curftable->peernum = 1;
                 change = 1;
 		printf(" size and time stamp change\n");
@@ -371,7 +375,8 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
             t->timestamp = head[i].timestamp;
             memcpy(t->name, head[i].name, strlen(head[i].name));
             t->peerip[0] = recvseg->peer_ip;
-            if(prev == NULL){
+		t->peer_type[0] = recvseg->peer_type;            
+if(prev == NULL){
                 file_tb->file = t;
                 prev = file_tb->file;
             }else{

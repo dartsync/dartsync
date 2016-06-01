@@ -147,6 +147,7 @@ void *p2p_upload(void* arg){
 	while(total_sent < size){
 		int chunk_size = get_chunk_size(total_sent,size);
 		bzero(file_buffer, FILE_BUFFER_SIZE);
+        
 		int bytes_read = fread(file_buffer, sizeof(char), chunk_size, upload_file);
 		if(bytes_read >= 0 && send(sock_fd , file_buffer, bytes_read,0) >= 0){
 			total_sent += bytes_read ;
