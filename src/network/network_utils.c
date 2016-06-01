@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include "network_utils.h"
 #include "../utils/constants.h"
+const int endian_check = 1;
+#define is_bigendian() ( (*(char*)&endian_check) == 0 )
 
 int get_server_socket_fd(int port, int maxConn){
 	int conn_listen_fd = -1;
@@ -89,7 +91,11 @@ int get_client_socket_fd_ip(unsigned int ip_address, int portNumber){
 	struct sockaddr_in server_addr;
     bzero(&server_addr, sizeof(struct sockaddr_in));
 	struct in_addr in;
-	in.s_addr = htonl((unsigned int)ip_address);
+	if(is_bigendian()){
+		in.s_addr = htonl((unsigned int)ip_address);
+	}else{
+		in.s_addr = (unsigned int)ip_address;
+	}
 	char* ip = inet_ntoa(in);
 	printf("requesting connection from ip :- %s and port %d \n" , ip, portNumber);
 	return get_client_socket_fd(ip,portNumber);
