@@ -19,3 +19,11 @@ int send_filetable();
 void start_peer(char *argv[]);
 void start_peer_in_test();
 char* get_dir();
+
+void lock_file_table();
+
+void unlock_file_table();
+
+void lock_download_table();
+
+void unlock_download_table();

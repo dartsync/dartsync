@@ -27,6 +27,25 @@ peer_file_table *filetable;
 
 //peer_peer_table *peertable;
 
+pthread_mutex_t *file_tb_mutex;
+pthread_mutex_t *download_tb_mutex;
+
+void lock_file_table(){
+	pthread_mutex_lock(file_tb_mutex);
+}
+
+void unlock_file_table(){
+	pthread_mutex_unlock(file_tb_mutex);
+}
+
+void lock_download_table(){
+	pthread_mutex_lock(download_tb_mutex);
+}
+
+void unlock_download_table(){
+	pthread_mutex_unlock(download_tb_mutex);
+}
+
 
 int connectToTracker(){
   int out_conn;
@@ -116,7 +135,7 @@ int peer_update_filetable(Node* recv,int recvnum){
 
 	//peer_file_table *curftable;
 	//curftable=filetable_init(dirname);
-
+	lock_file_table();
 	int curnum=filetable->filenum;
 	int num=0;
 	Node* recvfpt=recv;
@@ -135,6 +154,7 @@ int peer_update_filetable(Node* recv,int recvnum){
 		char name[256];
 		memset(name,0,256);
 		Node* recvnode=recv+num;
+		//printf("recv: %s,cur: %s",recvnode->name,curfpt->name);
 		if(strcmp(recvnode->name,curfpt->name)<0){
 			printf("%d\n",strlen(recvnode->name));
 			if(recvnode->name[strlen(recvnode->name)-1]=='/'){
@@ -160,14 +180,62 @@ int peer_update_filetable(Node* recv,int recvnum){
 		else if(strcmp(recvnode->name,curfpt->name)>0){
 			char delFilename[128];
 			memset(delFilename,0,128);
-			printf("Delete file: %s\n",curfpt->name);
-			sprintf(delFilename,"%s/%s",dirname,curfpt->name);
-			remove(delFilename);
-			//fileDeleted(filetable, curfpt->name);
-			curfpt=curfpt->pNext;
+			if(curfpt->name[strlen(curfpt->name)-1]!='/'){
+				printf("Delete file: %s\n",curfpt->name);
+				sprintf(delFilename,"%s/%s",dirname,curfpt->name);
+				remove(delFilename);
+				curfpt=curfpt->pNext;
+			}
+			else{
+				char tmppath[256];
+				memset(tmppath,0,256);
+				int i=1;
+				int j;
+				Node* tmp=curfpt->pNext;
+				for(j=0;j<strlen(tmp->name);j++){
+					if(tmp->name[j]=='/'){
+						tmppath[j]='/';
+						tmppath[j+1]='\0';
+						break;
+					}
+					tmppath[j]=tmp->name[j];
+				}
+				while(tmp!=NULL&&strcmp(curfpt->name,tmppath)==0){
+					memset(tmppath,0,256);
+					for(j=0;j<strlen(tmp->name);j++){
+						if(tmp->name[j]=='/'){
+							tmppath[j]='/';
+							tmppath[j+1]='\0';
+							break;
+						}
+						tmppath[j]=tmp->name[j];
+					}
+					tmp=tmp->pNext;
+					i++;
+				}
+				int k=i;
+				printf("na: %s",tmppath);
+				printf("i:%d",i);
+				while(i>0){
+					tmp=curfpt;
+					int n;
+					for(n=1;n<i;n++){
+					    tmp=tmp->pNext;
+					}
+					memset(delFilename,0,128);
+					printf("Delete dir: %s\n",tmp->name);		
+					sprintf(delFilename,"%s/%s",dirname,tmp->name);
+					remove(delFilename);
+					i--;
+				}
+				int m;
+				for(m=0;m<k;m++){
+					curfpt=curfpt->pNext;
+				}
+			}
 		}
 		else{
-			if(recvnode->name[strlen(recvnode->name)-1]!='/'){
+			printf("%s\n",recvnode->name);
 				if(recvnode->size!=curfpt->size||recvnode->timestamp!=curfpt->timestamp){
 					// tracker and peer both have this file, but peer side file need to be updated
 					if(recvnode->name[strlen(recvnode->name)-1]!='/'){
@@ -177,8 +245,9 @@ int peer_update_filetable(Node* recv,int recvnum){
 						num++;
 						curfpt=curfpt->pNext;
 					}
+						num++;
+						curfpt=curfpt->pNext;
 				}
-			}
 		else{
 				printf("In here\n");
 				num++;
@@ -215,13 +284,63 @@ int peer_update_filetable(Node* recv,int recvnum){
 	while(curfpt!=NULL){
 		char delFilename[128];
 		memset(delFilename,0,128);
-		printf("Delete file: %s\n",curfpt->name);
-		sprintf(delFilename,"%s/%s",dirname,curfpt->name);
-		remove(delFilename);
+			if(curfpt->name[strlen(curfpt->name)-1]!='/'){
+				printf("Delete file: %s\n",curfpt->name);
+				sprintf(delFilename,"%s/%s",dirname,curfpt->name);
+				remove(delFilename);
+				curfpt=curfpt->pNext;
+			}
+			else{
+				char tmppath[256];
+				memset(tmppath,0,256);
+				int i=1;
+				int j;
+				Node* tmp=curfpt->pNext;
+				for(j=0;j<strlen(tmp->name);j++){
+					if(tmp->name[j]=='/'){
+						tmppath[j]='/';
+						tmppath[j+1]='\0';
+						break;
+					}
+					tmppath[j]=tmp->name[j];
+				}
+				while(tmp!=NULL&&strcmp(curfpt->name,tmppath)==0){
+					memset(tmppath,0,256);
+					for(j=0;j<strlen(tmp->name);j++){
+						if(tmp->name[j]=='/'){
+							tmppath[j]='/';
+							tmppath[j+1]='\0';
+							break;
+						}
+						tmppath[j]=tmp->name[j];
+					}
+					tmp=tmp->pNext;
+					i++;
+				}
+				int k=i;
+				printf("na: %s",tmppath);
+				printf("i:%d",i);
+				while(i>0){
+					tmp=curfpt;
+					int n;
+					for(n=1;n<i;n++){
+					    tmp=tmp->pNext;
+					}
+					memset(delFilename,0,128);
+					printf("Delete dir: %s\n",tmp->name);		
+					sprintf(delFilename,"%s/%s",dirname,tmp->name);
+					remove(delFilename);
+					i--;
+				}
+				int m;
+				for(m=0;m<k;m++){
+					curfpt=curfpt->pNext;
+				}
+			}
 		//fileDeleted(filetable, curfpt->name);
-		curfpt=curfpt->pNext;
 	}
 	printf("unblock update\n");
+	unlock_file_table();
 	//unblockUpdate();
 	//filetable_destroy(curftable);
 }
@@ -595,6 +714,11 @@ void start_peer(char *argv[]){
 		exit(0);
 	}
     	signal(SIGINT, peer_stop);
+
+	file_tb_mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(file_tb_mutex, NULL);
+	download_tb_mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(download_tb_mutex, NULL);
 
 	pthread_t alive_thread;
     	pthread_create(&alive_thread,NULL,heartbeat,(void*)0);
