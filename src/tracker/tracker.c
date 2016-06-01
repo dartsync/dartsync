@@ -298,8 +298,10 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
     
     for(i = 0; i < num; i++){
         if(curftable != NULL && strcmp(head[i].name, curftable->name) == 0){
-    printf("compare node in list %s", head[i].name);
-            if(curftable->size == head[i].size && curftable->timestamp == head[i].timestamp){
+            printf("compare node in list %s", head[i].name);
+            if(head[i].name[strlen(head[i].name) - 1] == '/'){
+                printf("This is a dir! dir does not change\n");
+            }else if(curftable->size == head[i].size && curftable->timestamp == head[i].timestamp){
                 int flag = 1;
                 for(int i = 0; i < curftable->peernum; i++){
                     if(curftable->peerip[i] == recvseg->peer_ip){
@@ -313,7 +315,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                     curftable->peernum++;
                     // change = 1;
                 }
-		printf(" size and time stamp didn't change\n");
+                printf(" size and time stamp didn't change\n");
             }else if(curftable->timestamp < head[i].timestamp){
                 curftable->size = head[i].size;
                 curftable->timestamp = head[i].timestamp;
@@ -321,28 +323,28 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                 curftable->peer_type[0] = recvseg->peer_type;// peer_table_get_type(peer_tb,recvseg->peer_ip);
                 curftable->peernum = 1;
                 change = 1;
-		printf(" size and time stamp change\n");
+                printf(" size and time stamp change\n");
             }else{
-		change = 1;
-		printf("Peer %d has old version of %s\n", recvseg->peer_ip, head[i].name);	
-	    }
-		printf("The size is %d, the time stamp is: %d\n", head[i].size, head[i].timestamp);
-            prev = curftable;
-            curftable = curftable->pNext;
-        }else if(curftable != NULL && strcmp(head[i].name, curftable->name) < 0){
-        printf("add node in list %s\n", head[i].name);
-            Node *t = (Node*) malloc(sizeof(Node));
-            memset(t, 0, sizeof(Node));
-            t->size = head[i].size;
-            t->peernum = 1;
-            t->timestamp = head[i].timestamp;
-            memcpy(t->name, head[i].name, strlen(head[i].name));
-            t->peerip[0] = recvseg->peer_ip;
+                change = 1;
+                printf("Peer %d has old version of %s\n", recvseg->peer_ip, head[i].name);
+            }
+                printf("The size is %d, the time stamp is: %d\n", head[i].size, head[i].timestamp);
+                prev = curftable;
+                curftable = curftable->pNext;
+            }else if(curftable != NULL && strcmp(head[i].name, curftable->name) < 0){
+                printf("add node in list %s\n", head[i].name);
+                Node *t = (Node*) malloc(sizeof(Node));
+                memset(t, 0, sizeof(Node));
+                t->size = head[i].size;
+                t->peernum = 1;
+                t->timestamp = head[i].timestamp;
+                memcpy(t->name, head[i].name, strlen(head[i].name));
+                t->peerip[0] = recvseg->peer_ip;
             
-            if(prev == NULL){
-                t->pNext = curftable;
-                file_tb->file = t;
-                prev = file_tb->file;
+                if(prev == NULL){
+                    t->pNext = curftable;
+                    file_tb->file = t;
+                    prev = file_tb->file;
             }else{
                 t->pNext = curftable;
                 prev->pNext = t;
