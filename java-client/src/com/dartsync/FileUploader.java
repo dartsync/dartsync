@@ -27,23 +27,23 @@ public class FileUploader extends Thread {
 	
 	@Override
 	public void run() {
-		ServerSocket serverSocket;
-		try {
-			serverSocket = new ServerSocket(Constants.PORT_PEER_DOWNLOAD);
+		try (ServerSocket serverSocket = new ServerSocket(Constants.PORT_PEER_DOWNLOAD)){
 			System.out.println("File uploader started .. waiting for connection on IP = " + Client.getLocalIp() + " and port = " + Constants.PORT_PEER_DOWNLOAD);
 			System.out.println(Client.getInetAddress(Client.getLocalIp()).toString());
-			final Socket clientSocket = serverSocket.accept();
-			System.out.println("Peer connected :- " + clientSocket.getInetAddress().getHostAddress());
-			new Thread(){
-				@Override
-				public void run() {
-					try{
-						uploadFile(clientSocket);
-					}catch (IOException ex){
-						System.out.println("Error in uploading file :- ");
+			while(true){
+				final Socket clientSocket = serverSocket.accept();
+				System.out.println("Peer connected :- " + clientSocket.getInetAddress().getHostAddress());
+				new Thread(){
+					@Override
+					public void run() {
+						try{
+							uploadFile(clientSocket);
+						}catch (IOException ex){
+							System.out.println("Error in uploading file :- ");
+						}
 					}
-				}
-			}.start();
+				}.start();
+			}
 			
 		} catch (IOException e) {
 			System.out.println("Error in server socket");
@@ -55,12 +55,14 @@ public class FileUploader extends Thread {
 		if(clientSocket !=  null && clientSocket.isConnected()){
 			try{
 				BufferedReader br = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+				System.out.println("waiting for header");
 				String fileInfo = br.readLine();
 				/**
 				 * 1. fileName
 				 * 2. offset
 				 * 3. pieceLength
 				 */
+				System.out.println("uploadFile :- " + fileInfo);
 				String[] tokens = fileInfo.split(",");
 				if(tokens.length >= 3){
 					String fileName = tokens[0];
@@ -94,6 +96,7 @@ public class FileUploader extends Thread {
 		return chunk_size;
 	}
 	private void writeFileToStream(File fileToUpload, OutputStream os, int offset, int pieceLength) throws IOException{
+		System.out.println("writeFileToStream :- " + offset + "" + pieceLength);
 		FileInputStream fio = new FileInputStream(fileToUpload);
 		fio.skip(offset);
 		byte[] buffer = new byte[Constants.FILE_BUFFER_SIZE];

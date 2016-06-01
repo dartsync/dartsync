@@ -251,7 +251,7 @@ void *download_chunk_diff(void *download_info){
 	char header[256];
 	bzero(header,256);
 	peerdownload_seg *download_seg = (peerdownload_seg *) download_info;
-	download_seg->socket = get_client_socket_fd_ip(download_seg->peer_ip,PEER_DOWNLOAD_PORT_DIFFERENT);
+	download_seg->socket = get_client_socket_fd_ip_diff(download_seg->peer_ip,PEER_DOWNLOAD_PORT_DIFFERENT);
 	printf("connection socket = %d \n", download_seg->socket);
 	if(download_seg->socket < 0){
 		printf("socket error for chunk download from java ip = %d & port = %d \n", download_seg->peer_ip, PEER_DOWNLOAD_PORT_DIFFERENT );
@@ -267,8 +267,11 @@ void *download_chunk_diff(void *download_info){
 		return NULL;
 	}
 	int received_size = 0 ;
+	int total = 0 ;
 	char buffer[FILE_BUFFER_SIZE];
+	printf("header sent wating for download :- %s \n", download_seg->seg.file_name);
 	while((received_size = recv(download_seg->socket,buffer,FILE_BUFFER_SIZE,0)) > 0){
+		total += received_size;
 		printf("writting to temp file  = %d bytes buffer = %s \n", received_size, buffer);
 		if(fwrite(buffer,received_size,1,download_seg->tempFile) < 0){
 			printf("file write error in temp file \n");
@@ -278,7 +281,7 @@ void *download_chunk_diff(void *download_info){
 			return NULL;
 		}
 	}
-	printf("chunk download success \n");
+	printf("chunk download for for %s total = %d\n" , download_seg->seg.file_name, total);
 	download_seg->isSuccess = TRUE;
 	close(download_seg->socket);
 	fflush(stdout);
@@ -327,7 +330,7 @@ void merge_temp_file(FILE *main_file, FILE *temp_file){
 	char buffer[FILE_BUFFER_SIZE];
 	while(!feof(temp_file)){
 		int received_size = fread(buffer, sizeof(char), FILE_BUFFER_SIZE, temp_file);
-		printf("read %d bytes from temp file \n", received_size);
+		//printf("read %d bytes from temp file \n", received_size);
 		if(received_size > 0){
 			if(fwrite(buffer,received_size,1,main_file) < 0 ){
 				printf("file write error in main file \n");
