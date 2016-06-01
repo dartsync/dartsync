@@ -69,12 +69,6 @@ int watchDirectory(peer_file_table* ptable,char* directory){
              memset(tmppath,0,256);
              int isdir;
              event = (struct inotify_event *) ept;
-             if(event->mask & IN_ISDIR){
-                isdir=1;
-             }
-             else{
-                isdir=0;
-             }
              // get file name and inotify event type and related event handler
              char* filename=event->name;
              if(getnodefromwd(tmppath,event->wd)>0){
@@ -83,19 +77,27 @@ int watchDirectory(peer_file_table* ptable,char* directory){
              else{
                  memcpy(tmpname,filename,strlen(filename));
              }
+             if(event->mask & IN_ISDIR){
+                isdir=1;
+                sprintf(tmpname,"%s/",tmpname);
+             }
+             else{
+                isdir=0;
+             }
              if(event->len){
              if(block_updated){
                      if(event->mask & IN_CREATE){
                                      
                          //updated=fileAdded(ptable,filename);
                      if(isdir){
-                         printf("Inotify event:dir %s creat\n",tmpname);                     
-                         addwatch(fd,tmpname);                   
+                         printf("Inotify event:dir %s creat\n",tmpname);
+                         updated=fileAdded(ptable,tmpname);
+                         addwatch(fd,tmpname);
                      }
                      else{
                          if(!ignore_tmp(filename)){
                              printf("Inotify event:File %s creat\n",tmpname);
-                                 fileAdded(ptable,tmpname);
+                             updated=fileAdded(ptable,tmpname);
                              }else{
                              printf("tmp file, ignore it\n");
                          }
@@ -124,13 +126,15 @@ int watchDirectory(peer_file_table* ptable,char* directory){
                      if(isdir){
                          printf("Inotify event:dir %s delete\n",tmpname);
                          //addwatch(fd,dlist,tmpname);
+                         fileDeleted(ptable,tmpname);
+                         updated=1;
                          dlist_delnode(event->wd);
                                              
                      }
                      else{
                          if(!ignore_tmp(filename)){
                              printf("Inotify event:File %s delete\n",tmpname);
-                                 fileDeleted(ptable,tmpname);
+                             fileDeleted(ptable,tmpname);
                              updated=1;
                              //updated=1;
                              }else{
@@ -143,12 +147,14 @@ int watchDirectory(peer_file_table* ptable,char* directory){
                      if(isdir){
                          printf("Inotify event:DIR %s move to another directory\n",tmpname);
                          //addwatch(fd,dlist,tmpname);
+                         fileDeleted(ptable,tmpname);
+                         updated=1;
                          dlist_delnode(event->wd);                   
                      }
                      else{
                          if(!ignore_tmp(filename)){
                              printf("Inotify event:File %s move to another directory\n",tmpname);
-                                 fileDeleted(ptable,tmpname);
+                             fileDeleted(ptable,tmpname);
                              updated=1;
                              //updated=1;
                              }else{

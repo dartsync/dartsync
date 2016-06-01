@@ -132,13 +132,28 @@ int peer_update_filetable(Node* recv,int recvnum){
 	int i=0;
 	// file mutex
 	while(num<recvnum&&curfpt!=NULL){
+		char name[256];
+		memset(name,0,256);
 		Node* recvnode=recv+num;
 		if(strcmp(recvnode->name,curfpt->name)<0){
-			printf("Find new file: %s\n",recvnode->name);
-			int i;
-			printf("IPnum: %s\n",recvnode->name);
-			download_file(recvnode);
-			num++;
+			if(recvnode->name[strlen(recvnode->name)-1]=="/"){
+				char newdirname[128];
+				printf("Find new DIR: %s\n",recvnode->name);
+				get_dir_frompath(name,recvnode->name);
+				printf("Dir name: %s\n",name);
+				struct stat st = {0};
+				sprintf(newdirname,"%s/%s",dirname,recvnode->name);
+				if (stat(newdirname, &st) == -1) {
+				    mkdir(newdirname, 0700);
+				}
+			}
+			else{
+				printf("Find new file: %s\n",recvnode->name);
+				int i;
+				printf("IPnum: %s\n",recvnode->name);
+				download_file(recvnode);
+				num++;
+			}
 		}
 		else if(strcmp(recvnode->name,curfpt->name)>0){
 			char delFilename[128];
@@ -152,7 +167,8 @@ int peer_update_filetable(Node* recv,int recvnum){
 			if(recvnode->size!=curfpt->size||recvnode->timestamp!=curfpt->timestamp){
 				// tracker and peer both have this file, but peer side file need to be updated
 				printf("Find motified : %s\n",recvnode->name);
-//				download_file(recvfpt);
+				remove(recvnode->name);
+				download_file(recvnode);
 				num++;
 				curfpt=curfpt->pNext;
 			}
@@ -188,6 +204,19 @@ int peer_update_filetable(Node* recv,int recvnum){
 	//filetable_destroy(curftable);
 }
 
+int get_dir_frompath(char* name,char* path){
+	memcpy(name,path,strlen(path));
+	name[strlen(name)-1]=name[strlen(name)];
+	printf("path after remove /%s\n",name);
+	int l = 0;
+	char* tmp=strstr(name,"/");
+	while(tmp!=NULL){
+		l=strlen(tmp)+1;
+    	name=&name[strlen(name)-l+2];
+		tmp=strstr(name,"/");
+	}
+	return 1;
+}
 
 void peerlistening(){
   printf("Now in peerlistening thread \n");
