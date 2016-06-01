@@ -250,7 +250,9 @@ int peer_update_filetable(Node* recv,int recvnum){
 					// tracker and peer both have this file, but peer side file need to be updated
 					if(recvnode->name[strlen(recvnode->name)-1]!='/'){
 						printf("Find motified : %s\n",recvnode->name);
-						remove(recvnode->name);
+						char delFilename[128];
+						sprintf(delFilename,"%s/%s",dirname,recvnode->name);
+						remove(delFilename);
 						download_file(recvnode);
 						num++;
 						curfpt=curfpt->pNext;
