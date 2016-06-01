@@ -9,6 +9,8 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.Map;
+import java.util.Set;
 
 import com.dartsync.TrackerInfo.FileInfo;
 
@@ -116,6 +118,20 @@ public class FileMonitor extends Thread {
 		return !filePath.isDirectory() && !filePath.getName().startsWith(".") && !filePath.getName().endsWith("~");
 	}
 	
+
+	private boolean isAnyFileDownloading(){
+		synchronized (trackerInfo){
+			Set<Map.Entry<String, TrackerInfo.FileInfo>> localFileSet = trackerInfo.getFileTable().entrySet();
+			for(Map.Entry<String,TrackerInfo.FileInfo> entry : localFileSet){
+					if(entry.getValue().fileStatus == TrackerInfo.FILE_STATUS_DOWNLOADING) {
+						System.out.println("File still downloading :- " + entry.getKey());
+						return true;
+					}
+			}
+		}
+		return false;
+	}
+	
 	@Override
 	public void run(){
 		System.out.println("File monitor started ...");
@@ -158,18 +174,20 @@ public class FileMonitor extends Thread {
 	
 	private void sendFileBroadCast() {
 		try {
-			System.out.println("Send file broadcast");
-			SegmentPeer peer = new SegmentPeer();
-			peer.type = Constants.SIGNAL_FILE_UPDATE;
-			peer.protocolLength = 0;
-			peer.peer_ip = Client.getLocalIp();
-			peer.fileList.addAll(trackerInfo.getFileList());
-			String tcpString = peer.getTCPString();
-			System.out.println("File update = " + tcpString);
-			System.out.println("Sending to socket");
-			PrintWriter pw = new PrintWriter(trackerInfo.getSocket().getOutputStream(), true);
-			pw.println(tcpString);
-			System.out.println("sent to socket");
+			if(!isAnyFileDownloading()){
+				System.out.println("Send file broadcast");
+				SegmentPeer peer = new SegmentPeer();
+				peer.type = Constants.SIGNAL_FILE_UPDATE;
+				peer.protocolLength = 0;
+				peer.peer_ip = Client.getLocalIp();
+				peer.fileList.addAll(trackerInfo.getFileList());
+				String tcpString = peer.getTCPString();
+				System.out.println("File update = " + tcpString);
+				System.out.println("Sending to socket");
+				PrintWriter pw = new PrintWriter(trackerInfo.getSocket().getOutputStream(), true);
+				pw.println(tcpString);
+				System.out.println("sent to socket");
+			}
 		} catch (Exception ex) {
 			System.out.println("Error in sending file update :- " + ex.getMessage());
 		}

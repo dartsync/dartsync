@@ -95,7 +95,7 @@ void *p2p_upload_diff(void *arg){
 		printf("Error in p2p_upload_diff socket fd = %d\n", sock_fd);
 		pthread_exit(NULL);
 	}
-	if(recv(sock_fd,buffer,128,0) < 0){
+	if(recv(sock_fd,buffer,128,0) <= 0){
 		close(sock_fd);
 		printf("Error in p2p_upload_diff recv ERROR  \n");
 		pthread_exit(NULL);
