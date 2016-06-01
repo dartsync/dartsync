@@ -136,7 +136,8 @@ int peer_update_filetable(Node* recv,int recvnum){
 		memset(name,0,256);
 		Node* recvnode=recv+num;
 		if(strcmp(recvnode->name,curfpt->name)<0){
-			if(recvnode->name[strlen(recvnode->name)-1]=="/"){
+			printf("%d\n",strlen(recvnode->name));
+			if(recvnode->name[strlen(recvnode->name)-1]=='/'){
 				char newdirname[128];
 				printf("Find new DIR: %s\n",recvnode->name);
 				get_dir_frompath(name,recvnode->name);
@@ -146,6 +147,7 @@ int peer_update_filetable(Node* recv,int recvnum){
 				if (stat(newdirname, &st) == -1) {
 				    mkdir(newdirname, 0700);
 				}
+				num++;
 			}
 			else{
 				printf("Find new file: %s\n",recvnode->name);
@@ -157,6 +159,7 @@ int peer_update_filetable(Node* recv,int recvnum){
 		}
 		else if(strcmp(recvnode->name,curfpt->name)>0){
 			char delFilename[128];
+			memset(delFilename,0,128);
 			printf("Delete file: %s\n",curfpt->name);
 			sprintf(delFilename,"%s/%s",dirname,curfpt->name);
 			remove(delFilename);
@@ -166,11 +169,13 @@ int peer_update_filetable(Node* recv,int recvnum){
 		else{
 			if(recvnode->size!=curfpt->size||recvnode->timestamp!=curfpt->timestamp){
 				// tracker and peer both have this file, but peer side file need to be updated
-				printf("Find motified : %s\n",recvnode->name);
-				remove(recvnode->name);
-				download_file(recvnode);
-				num++;
-				curfpt=curfpt->pNext;
+				if(recvnode->name[strlen(recvnode->name)-1]!='/'){
+					printf("Find motified : %s\n",recvnode->name);
+					remove(recvnode->name);
+					download_file(recvnode);
+					num++;
+					curfpt=curfpt->pNext;
+				}
 			}
 			else if(recvnode->peernum){
 				num++;
@@ -185,14 +190,32 @@ int peer_update_filetable(Node* recv,int recvnum){
 	}
 	printf("here\n");
 	while(num<recvnum){
-		Node* recvnode=recv+num;
-		printf("Find new file: %s\n",recvnode->name);
-		printf("Target file IP : %u\n",recvnode->peerip[0]);
-		download_file(recvnode);
-		num++;
+		    char name[256];
+			memset(name,0,256);
+			Node* recvnode=recv+num;
+			if(recvnode->name[strlen(recvnode->name)-1]=='/'){
+				char newdirname[128];
+				memset(newdirname,0,128);
+				printf("Find new DIR: %s\n",recvnode->name);
+				get_dir_frompath(name,recvnode->name);
+				printf("Dir name: %s\n",name);
+				struct stat st = {0};
+				sprintf(newdirname,"%s/%s",dirname,recvnode->name);
+				if (stat(newdirname, &st) == -1) {
+				    mkdir(newdirname, 0700);
+				}
+				num++;
+			}
+			else{
+				printf("Find new file: %s\n",recvnode->name);
+				printf("Target file IP : %u\n",recvnode->peerip[0]);
+				download_file(recvnode);
+				num++;
+			}
 	}
 	while(curfpt!=NULL){
 		char delFilename[128];
+		memset(delFilename,0,128);
 		printf("Delete file: %s\n",curfpt->name);
 		sprintf(delFilename,"%s/%s",dirname,curfpt->name);
 		remove(delFilename);
@@ -206,7 +229,7 @@ int peer_update_filetable(Node* recv,int recvnum){
 
 int get_dir_frompath(char* name,char* path){
 	memcpy(name,path,strlen(path));
-	name[strlen(name)-1]=name[strlen(name)];
+	name[strlen(name)-1]='\0';
 	printf("path after remove /%s\n",name);
 	int l = 0;
 	char* tmp=strstr(name,"/");

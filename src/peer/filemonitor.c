@@ -72,7 +72,7 @@ int watchDirectory(peer_file_table* ptable,char* directory){
              // get file name and inotify event type and related event handler
              char* filename=event->name;
              if(getnodefromwd(tmppath,event->wd)>0){
-                 sprintf(tmpname,"%s/%s",tmppath,filename);
+                 sprintf(tmpname,"%s%s",tmppath,filename);
              }
              else{
                  memcpy(tmpname,filename,strlen(filename));
