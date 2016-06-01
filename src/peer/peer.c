@@ -69,7 +69,8 @@ int send_registion(int out_conn){
   sendseg->protocol_len=sizeof(ptt_seg_t);
 //  sendseg->protocol_name=;
   sendseg->type=REGISTER;
-  sendseg->peer_ip=getmyip();
+  sendseg->peer_ip= getmyip();
+  printf("sent ip address :- %d",sendseg->peer_ip);
 //  sendseg->port=;
 //  sendseg->
   sendseg->file_table_size=0;
@@ -90,6 +91,7 @@ int send_filetable(){
 //	sendseg->protocol_name="PI_NET";
 	sendseg->type=FILE_UPDATE;
 	sendseg->peer_ip=getmyip();
+	printf("sent ip address :- %d",sendseg->peer_ip);
 //	sendseg->port=;
 	
 	//peer_file_table *sendftable;
@@ -437,6 +439,7 @@ void* heartbeat(){
 //		sendseg->protocol_name=;
 		sendseg->type=KEEP_ALIVE;
 		sendseg->peer_ip=getmyip();
+		printf("sent ip address :- %d",sendseg->peer_ip);
 //		sendseg->port=;
 //		sendseg->file_table_size=;
 //		sendseg->file_table=;

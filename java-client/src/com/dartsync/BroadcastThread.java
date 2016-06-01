@@ -169,13 +169,17 @@ public class BroadcastThread extends Thread {
 		boolean result = false;
 		try {
 			InetAddress addr = Client.getInetAddress(ipAddress);
+			System.out.println("peer address :- " + addr.toString());
 			Socket socket = new Socket(addr, Constants.PORT_PEER_DOWNLOAD);
 			socket.setKeepAlive(true);
 			socket.setSoTimeout(5000);
 			PrintWriter pw = new PrintWriter(socket.getOutputStream(),true);
 			InputStream is = socket.getInputStream();
 			FileOutputStream fis = new FileOutputStream(toFile);
-			pw.println(fileName + "," + offset + "," + length);
+			String header = fileName + "," + offset + "," + length;
+			System.out.println("Sending header :- " + header);
+			pw.println(header);
+		
 			byte[] bufferRead = new byte[1024];
 			int received_size = 0 ;
 			int totalRead = 0 ;

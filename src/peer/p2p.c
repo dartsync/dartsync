@@ -36,6 +36,7 @@ int get_chunk_size(int total_sent, int size) {
 }
 
 int upload_file(int sock_fd, char* filename, int offset, int size) {
+	printf("uploading file :- %s \n", filename);
 	char* directory=get_dir();
 	char full_path[256];
 	sprintf(full_path,"%s/%s",directory,filename);
@@ -75,7 +76,8 @@ int parse_upload_req(char* buffer, peer2peer_seg *seg, char* delimiter){
 	token = strtok(buffer,delimiter) ;
 	printf("%s\n",token);
 	if(token == NULL) return FALSE;
-	memcpy(seg->file_name,token,sizeof(token));
+	sprintf(seg->file_name,"%s",token);
+	printf("%s\n",seg->file_name);
 	if((token = strtok(NULL,delimiter)) == NULL) return FALSE ;
 	printf("%s\n",token);
 	seg->start_idx = atoi(token);
@@ -87,18 +89,20 @@ int parse_upload_req(char* buffer, peer2peer_seg *seg, char* delimiter){
 
 void *p2p_upload_diff(void *arg){
 	int sock_fd = *(int * )arg;
-	char buffer[PIECE_LENGTH] ;
+	char buffer[128] ;
+	bzero(buffer,128);
 	if(sock_fd < 0 ){
 		printf("Error in p2p_upload_diff socket fd = %d\n", sock_fd);
 		pthread_exit(NULL);
 	}
-	if(recv(sock_fd,buffer,sizeof(PIECE_LENGTH),0) < 0){
+	if(recv(sock_fd,buffer,128,0) < 0){
 		close(sock_fd);
 		printf("Error in p2p_upload_diff recv ERROR  \n");
 		pthread_exit(NULL);
 	}
 	printf("p2p_upload_diff received = %s \n", buffer);
 	peer2peer_seg *header = (peer2peer_seg * ) malloc(sizeof(peer2peer_seg));
+	bzero(header,sizeof(peer2peer_seg));
 	parse_upload_req(buffer,header,",");
 	if( upload_file(sock_fd,header->file_name,header->start_idx, header->piece_len)){
 		printf("upload file success diff \n");
