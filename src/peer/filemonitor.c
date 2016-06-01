@@ -18,7 +18,6 @@ void* update_filetable(){
         unsigned long int curtime = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
         //printf("mtime: %u updated: %d",mtime,updated);
         if(curtime - mtime > 3 * 1000000 && updated>0 && dtable_empty()){
-            
             send_filetable();
             updated=0;
         }
