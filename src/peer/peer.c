@@ -33,7 +33,7 @@ int connectToTracker(){
   struct sockaddr_in servaddr;
   servaddr.sin_family =AF_INET;
   //servaddr.sin_addr.s_addr= inet_addr("129.170.214.100");
-  servaddr.sin_addr.s_addr= inet_addr("129.170.212.204");
+  servaddr.sin_addr.s_addr= inet_addr("129.170.212.20");
   servaddr.sin_port = htons(TRACKER_PORT);
   out_conn = socket(AF_INET,SOCK_STREAM,6);
 
@@ -240,6 +240,51 @@ typedef struct download_seg{
 	peer2peer_seg seg;
 } peerdownload_seg;
  */
+void append_down_header(peerdownload_seg *node, char *body){
+	sprintf(body,"%s,",body,node->seg.file_name);
+	sprintf(body,"%s%d,",body,node->seg.start_idx);
+	sprintf(body,"%s%d\n",body,node->seg.piece_len);
+}
+void *download_chunk_diff(void *download_info){
+	printf("downloading chunk server port = %d\n",PEER_DOWNLOAD_PORT);
+	fflush(stdout);
+	char header[256];
+	bzero(header,256);
+	peerdownload_seg *download_seg = (peerdownload_seg *) download_info;
+	download_seg->socket = get_client_socket_fd_ip(download_seg->peer_ip,PEER_DOWNLOAD_PORT_DIFFERENT);
+	printf("connection socket = %d \n", download_seg->socket);
+	if(download_seg->socket < 0){
+		printf("socket error for chunk download from java ip = %d & port = %d \n", download_seg->peer_ip, PEER_DOWNLOAD_PORT_DIFFERENT );
+		pthread_exit(NULL);
+		return NULL;
+	}
+	append_down_header(download_seg,header);
+	printf("java download header = %s \n",header);
+	if(send(download_seg->socket,header,sizeof(header),0)<0){
+		printf("unable to send download header to java socket %d \n",download_seg->socket);
+		close(download_seg->socket);
+		pthread_exit(NULL);
+		return NULL;
+	}
+	int received_size = 0 ;
+	char buffer[FILE_BUFFER_SIZE];
+	while((received_size = recv(download_seg->socket,buffer,FILE_BUFFER_SIZE,0)) > 0){
+		printf("writting to temp file  = %d bytes buffer = %s \n", received_size, buffer);
+		if(fwrite(buffer,received_size,1,download_seg->tempFile) < 0){
+			printf("file write error in temp file \n");
+			printf("unable to send segment to socket %d \n",download_seg->socket);
+			close(download_seg->socket);
+			pthread_exit(NULL);
+			return NULL;
+		}
+	}
+	printf("chunk download success \n");
+	download_seg->isSuccess = TRUE;
+	close(download_seg->socket);
+	fflush(stdout);
+	pthread_exit(NULL);
+	return NULL;
+}
 void *download_chunk(void *download_info){
 	printf("downloading chunk server port = %d\n",PEER_DOWNLOAD_PORT);
 	fflush(stdout);
@@ -315,8 +360,13 @@ void *file_download_handler(void *file_info){
 				download_seg->tempFile = tmpfile(); // assuming tempfile is unique and will not stored in the file monitor directory
 				download_seg->isSuccess = FALSE;
 				multi_threads[i].download_seg = download_seg;
-				printf("downloading chunk = %d \n",i);
-				pthread_create(&(multi_threads[i].thread), NULL, download_chunk,(void *)download_seg);
+				if(file_node->peer_type[i] == PEER_TYPE_DIFFERENT){
+					printf("downloading chunk from java = %d \n",i);
+					pthread_create(&(multi_threads[i].thread), NULL, download_chunk_diff,(void *)download_seg);
+				}else{
+					printf("downloading chunk from C = %d \n",i);
+					pthread_create(&(multi_threads[i].thread), NULL, download_chunk,(void *)download_seg);
+				}
 			}
 			for(int i = 0 ; i < chunks ; i++){
 				pthread_join((multi_threads[i].thread),NULL);
