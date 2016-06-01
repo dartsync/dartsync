@@ -1,13 +1,35 @@
 #include "filemonitor.h"
 #include "downloadtable.h"
+#include <pthread.h>
+#include <sys/time.h>
 
 char DIR_PATH[128];
 int block_updated;
 dirlist* dlist;
+int timeflag;
+int updated;
+struct timeval currentTime;
+unsigned long int mtime;
+
+void* update_filetable(){
+    while(1){
+        struct timeval currentTime;
+        gettimeofday(&currentTime, NULL);
+        unsigned long int curtime = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
+        //printf("mtime: %u updated: %d",mtime,updated);
+        if(curtime - mtime > 3 * 1000000 && updated>0){
+            send_filetable();
+            updated=0;
+        }
+    }
+}
 
 int watchDirectory(peer_file_table* ptable,char* directory){
 	dlist=NULL;
+    updated=0;
+    timeflag=0;
 	block_updated=1;
+
 	struct inotify_event *event;
 	memcpy(DIR_PATH,directory,strlen(directory));
 	ssize_t numRead;
@@ -23,136 +45,147 @@ int watchDirectory(peer_file_table* ptable,char* directory){
 	if(fd<0){
 		printf("filemonitor: Fail to initialize inotify\n");
 	}
+
+    struct timeval currentTime;
+    gettimeofday(&currentTime, NULL);
+    mtime = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
+
+    pthread_t ftable_update_thread;
+    pthread_create(&ftable_update_thread,NULL,update_filetable,NULL);
 	
 	addwatch(fd,NULL);
-	while(1){
-		int updated=0;
-		numRead=read(fd, buf, EVENT_BUF_LEN);
-		if(numRead<=0){
-			printf("Eror reading inotify event\n");
-		//	exit
-		}
-		for (ept=buf; ept<buf+numRead;) {
-		    memset(tmpname,0,256);
-		    memset(tmppath,0,256);
-		    int isdir;
-		    event = (struct inotify_event *) ept;
-		    if(event->mask & IN_ISDIR){
-			isdir=1;
-		    }
-		    else{
-			isdir=0;
-		    }
-		    // get file name and inotify event type and related event handler
-		    char* filename=event->name;
-		    if(getnodefromwd(tmppath,event->wd)>0){
-		    	sprintf(tmpname,"%s/%s",tmppath,filename);
-		    }
-		    else{
-		    	memcpy(tmpname,filename,strlen(filename));
-		    }
-		    if(event->len){
-			if(block_updated){
-			    	if(event->mask & IN_CREATE){
-						    		
-			    		//updated=fileAdded(ptable,filename);
-					if(isdir){
-						printf("Inotify event:dir %s creat\n",tmpname);						
-						addwatch(fd,tmpname);					
-					}
-					else{
-						if(!ignore_tmp(filename)){
-							printf("Inotify event:File %s creat\n",tmpname);
-			    				fileAdded(ptable,tmpname);
-							}else{
-							printf("tmp file, ignore it\n");
-						}
-						//updated=1;
-					}
-			    	}
-			    	else if(event->mask & IN_MODIFY){
-					//updated=1;
-					if(isdir){
-						printf("Inotify event:dir %s modify\n",tmpname);	
-						//addwatch(fd,dlist,tmpname);					
-					}
-					else{
-						if(!ignore_tmp(filename)){
-							printf("Inotify event:File %s modify\n",tmpname);
-			    				updated=fileModified(ptable,tmpname);
-							//updated=1;
-							}else{
-							printf("tmp file, ignore it\n");
-						}
-					}
+     while(1){
+         numRead=read(fd, buf, EVENT_BUF_LEN);
+         struct timeval cTime;
+         gettimeofday(&cTime, NULL);
+         mtime = cTime.tv_sec * 1000000 + cTime.tv_usec;
+
+         if(numRead<=0){
+             printf("Eror reading inotify event\n");
+         //  exit
+         }
+         for (ept=buf; ept<buf+numRead;) {
+             memset(tmpname,0,256);
+             memset(tmppath,0,256);
+             int isdir;
+             event = (struct inotify_event *) ept;
+             if(event->mask & IN_ISDIR){
+                isdir=1;
+             }
+             else{
+                isdir=0;
+             }
+             // get file name and inotify event type and related event handler
+             char* filename=event->name;
+             if(getnodefromwd(tmppath,event->wd)>0){
+                 sprintf(tmpname,"%s/%s",tmppath,filename);
+             }
+             else{
+                 memcpy(tmpname,filename,strlen(filename));
+             }
+             if(event->len){
+             if(block_updated){
+                     if(event->mask & IN_CREATE){
+                                     
+                         //updated=fileAdded(ptable,filename);
+                     if(isdir){
+                         printf("Inotify event:dir %s creat\n",tmpname);                     
+                         addwatch(fd,tmpname);                   
+                     }
+                     else{
+                         if(!ignore_tmp(filename)){
+                             printf("Inotify event:File %s creat\n",tmpname);
+                                 fileAdded(ptable,tmpname);
+                             }else{
+                             printf("tmp file, ignore it\n");
+                         }
+                         //updated=1;
+                     }
+                     }
+                     else if(event->mask & IN_MODIFY){
+                     //updated=1;
+                     if(isdir){
+                         printf("Inotify event:dir %s modify\n",tmpname);    
+                         //addwatch(fd,dlist,tmpname);                   
+                     }
+                     else{
+                         if(!ignore_tmp(filename)){
+                             printf("Inotify event:File %s modify\n",tmpname);
+                             updated=fileModified(ptable,tmpname);
+                             //updated=1;
+                             }else{
+                             printf("tmp file, ignore it\n");
+                         }
+                     }
 
 
-			    	}
-			    	else if(event->mask & IN_DELETE){
-					if(isdir){
-						printf("Inotify event:dir %s delete\n",tmpname);
-						//addwatch(fd,dlist,tmpname);
-						dlist_delnode(event->wd);
-											
-					}
-					else{
-						if(!ignore_tmp(filename)){
-							printf("Inotify event:File %s delete\n",tmpname);
-			    				fileDeleted(ptable,tmpname);
-							updated=1;
-							//updated=1;
-							}else{
-							printf("tmp file, ignore it\n");
-						}
-					}
+                     }
+                     else if(event->mask & IN_DELETE){
+                     if(isdir){
+                         printf("Inotify event:dir %s delete\n",tmpname);
+                         //addwatch(fd,dlist,tmpname);
+                         dlist_delnode(event->wd);
+                                             
+                     }
+                     else{
+                         if(!ignore_tmp(filename)){
+                             printf("Inotify event:File %s delete\n",tmpname);
+                                 fileDeleted(ptable,tmpname);
+                             updated=1;
+                             //updated=1;
+                             }else{
+                             printf("tmp file, ignore it\n");
+                         }
+                     }
 
-			    	}
-			    	else if(event->mask & IN_MOVED_FROM){
-					if(isdir){
-						printf("Inotify event:DIR %s move to another directory\n",tmpname);
-						//addwatch(fd,dlist,tmpname);
-						dlist_delnode(event->wd);					
-					}
-					else{
-						if(!ignore_tmp(filename)){
-							printf("Inotify event:File %s move to another directory\n",tmpname);
-			    				fileDeleted(ptable,tmpname);
-							updated=1;
-							//updated=1;
-							}else{
-							printf("tmp file, ignore it\n");
-						}
-					}
-			    	}
-				else if(event->mask & IN_MOVED_TO){
-					if(isdir){
-						printf("Inotify event:DIR %s move moved in\n",tmpname);
-						addwatch(fd,tmpname);					
-					}
-					else{
-						if(!ignore_tmp(filename)){
-							printf("Inotify event:File %s moved in\n",tmpname);
-			    				fileAdded(ptable,tmpname);
-							//updated=1;
-							}else{
-							printf("tmp file, ignore it\n");
-						}
-					}
-					
-			    	}
-			}
-	 				// haven't handle delete self mask
-		    }		
-		    ept += sizeof(struct inotify_event) + event->len;
-	    }
-	    if(updated){
-		if(dtable_empty()){
-			send_filetable();;	
-		}	
-	    }
-        //send_filetable();
-	}
+                     }
+                     else if(event->mask & IN_MOVED_FROM){
+                     if(isdir){
+                         printf("Inotify event:DIR %s move to another directory\n",tmpname);
+                         //addwatch(fd,dlist,tmpname);
+                         dlist_delnode(event->wd);                   
+                     }
+                     else{
+                         if(!ignore_tmp(filename)){
+                             printf("Inotify event:File %s move to another directory\n",tmpname);
+                                 fileDeleted(ptable,tmpname);
+                             updated=1;
+                             //updated=1;
+                             }else{
+                             printf("tmp file, ignore it\n");
+                         }
+                     }
+                     }
+                 else if(event->mask & IN_MOVED_TO){
+                     if(isdir){
+                         printf("Inotify event:DIR %s move moved in\n",tmpname);
+                         addwatch(fd,tmpname);                   
+                     }
+                     else{
+                         if(!ignore_tmp(filename)){
+                             printf("Inotify event:File %s moved in\n",tmpname);
+                                 fileAdded(ptable,tmpname);
+                             //updated=1;
+                             }else{
+                             printf("tmp file, ignore it\n");
+                         }
+                     }
+                     
+                     }
+             }
+                     // haven't handle delete self mask
+             }       
+             ept += sizeof(struct inotify_event) + event->len;
+         }
+/*         if(updated){
+             if(dtable_empty()){
+                 send_filetable();  
+             }   
+         }*/
+           //send_filetable();
+     }
 }
+
 //read configuration file and find the dir to be monitored;
 int readConfigFile(char* filename){
     char lineBuf[100];
@@ -177,14 +210,15 @@ int fileAdded(peer_file_table* ptable,char* filename){
 	FileInfo* finfo=getFileInfo(filename);
 	printf("File size: %u",finfo->size);
 	dNode dfile;
-	memcpy(dfile.name,filename,strlen(filename));
+memset(&dfile, 0, sizeof(dNode));	
+memcpy(dfile.name,filename,strlen(filename));
 	//dfile->size=finfo->size;
 	//dfile->timestamp=finfo->timestamp;
 	if(is_exist(&dfile)<0){
 		downloadtable_print();
 		printf("fileadd: file not exist in downloadtable\n");
 		if(filetable_is_exist(ptable,finfo->size, filename)<0){
-			printf("fileadd: node already have\n");
+			printf("fileadd: node not already have\n");
 			filetable_addnode(ptable, finfo->size, filename, finfo->lastModifyTime);
 		}
 		free(finfo);
@@ -200,6 +234,7 @@ int fileModified(peer_file_table* ptable,char* filename ){
 	printf("In fileModifieded function\n");
 	FileInfo* finfo=getFileInfo(filename);
 	dNode dfile;
+	memset(&dfile, 0, sizeof(dNode));
 	memcpy(dfile.name,filename,strlen(filename));
 	printf("Timestamp: %u\n",finfo->lastModifyTime);
 	if(is_exist(&dfile)<0){
@@ -216,14 +251,16 @@ int fileModified(peer_file_table* ptable,char* filename ){
 		memcpy(dfile.name,filename,strlen(filename));
 		getdnodebyname(&dfile);
 		if(dfile.size!=finfo->size){
-			return -1;		
+		  printf("dfile size: %d, finfo size: %d add fail, hehe\n", dfile.size, finfo->size);	
+		  return -1;		
 		}
 		downloadtable_delnode(&dfile);
 		filetable_addnode(ptable, dfile.size, dfile.name, dfile.timestamp);
-
+		downloadtable_print();
+        filetable_print(ptable);
 	}
 	free(finfo);
-	return -1;
+	return 1;
 }
 int fileDeleted(peer_file_table* ptable,char* filename){
 	printf("In fileDeleted function\n");
@@ -241,7 +278,8 @@ FileInfo* getFileInfo(char* filename){
 	char path[100];
 	sprintf(path,"%s/%s",DIR_PATH,filename);
 	printf("get file Info: %s",path);
-	sleep(1);
+    select(0,0,0,0,&(struct timeval){.tv_usec =  1000000 * 0.1});
+	//sleep(1);
 	FileInfo* file=(FileInfo*)malloc(sizeof(FileInfo));
 	struct stat attrib;
 	stat(path, &attrib);
