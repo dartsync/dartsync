@@ -116,7 +116,8 @@ void downloadtable_print(){
 int getdnodebyname(dNode* node){
 	dNode* tmp=dtable->file;
 	int i;
-	for(i=0;i<dtable->dfilenum;i++){
+printf("this node's name is %s\n", node->name);	
+for(i=0;i<dtable->dfilenum;i++){
 		if(strcmp(node->name,tmp->name)==0){
 			node->size=tmp->size;
 			node->timestamp=tmp->timestamp;
@@ -124,6 +125,7 @@ int getdnodebyname(dNode* node){
 		}		
 		tmp=tmp->pNext;
 	}
+printf("do not have this node in download table\n");
 	return -1;
 }
 

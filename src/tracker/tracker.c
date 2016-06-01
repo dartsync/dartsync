@@ -310,7 +310,7 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                     // change = 1;
                 }
 		printf(" size and time stamp didn't change\n");
-            }else{
+            }else if(curftable->timestamp < head[i].timestamp){
                 curftable->size = head[i].size;
                 curftable->timestamp = head[i].timestamp;
                 curftable->peerip[0] = recvseg->peer_ip;
@@ -318,7 +318,10 @@ int tracker_update_filetable(ptt_seg_t* recvseg){
                 curftable->peernum = 1;
                 change = 1;
 		printf(" size and time stamp change\n");
-            }
+            }else{
+		change = 1;
+		printf("Peer %d has old version of %s\n", recvseg->peer_ip, head[i].name);	
+	    }
 		printf("The size is %d, the time stamp is: %d\n", head[i].size, head[i].timestamp);
             prev = curftable;
             curftable = curftable->pNext;
